@@ -23,6 +23,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
     status: 'todo' as 'todo' | 'in_progress' | 'completed',
     due_date: selectedDate
   });
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -39,8 +40,11 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       .order('created_at', { ascending: false });
     const data = dataRaw as Task[] | null;
 
-    if (!error && data) {
-      setTasks(data);
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      setTasks(data || []);
+      setErrorMsg('');
     }
     setLoading(false);
   };
@@ -58,9 +62,12 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
         } as Database['public']['Tables']['tasks']['Update'])
         .eq('id', editingTask.id);
 
-      if (!error) {
+      if (error) {
+        setErrorMsg(error.message);
+      } else {
         await fetchTasks();
         resetForm();
+        setErrorMsg('');
       }
     } else {
       const { error } = await supabase
@@ -70,9 +77,12 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
           user_id: user!.id
         } as Database['public']['Tables']['tasks']['Insert']]);
 
-      if (!error) {
+      if (error) {
+        setErrorMsg(error.message);
+      } else {
         await fetchTasks();
         resetForm();
+        setErrorMsg('');
       }
     }
   };
@@ -107,8 +117,11 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       .delete()
       .eq('id', id);
 
-    if (!error) {
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
       await fetchTasks();
+      setErrorMsg('');
     }
   };
 
@@ -123,8 +136,11 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       } as Database['public']['Tables']['tasks']['Update'])
       .eq('id', task.id);
 
-    if (!error) {
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
       await fetchTasks();
+      setErrorMsg('');
     }
   };
 
@@ -166,6 +182,11 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
           Add Task
         </button>
       </div>
+      {errorMsg && (
+        <div className="mb-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
+          {errorMsg}
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4">

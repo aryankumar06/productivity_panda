@@ -106,6 +106,10 @@ ALTER TABLE habit_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
 -- Tasks policies
+DROP POLICY IF EXISTS "Users can view own tasks" ON tasks;
+DROP POLICY IF EXISTS "Users can create own tasks" ON tasks;
+DROP POLICY IF EXISTS "Users can update own tasks" ON tasks;
+DROP POLICY IF EXISTS "Users can delete own tasks" ON tasks;
 CREATE POLICY "Users can view own tasks"
   ON tasks FOR SELECT
   TO authenticated
@@ -128,6 +132,10 @@ CREATE POLICY "Users can delete own tasks"
   USING (auth.uid() = user_id);
 
 -- Habits policies
+DROP POLICY IF EXISTS "Users can view own habits" ON habits;
+DROP POLICY IF EXISTS "Users can create own habits" ON habits;
+DROP POLICY IF EXISTS "Users can update own habits" ON habits;
+DROP POLICY IF EXISTS "Users can delete own habits" ON habits;
 CREATE POLICY "Users can view own habits"
   ON habits FOR SELECT
   TO authenticated
@@ -150,6 +158,9 @@ CREATE POLICY "Users can delete own habits"
   USING (auth.uid() = user_id);
 
 -- Habit completions policies
+DROP POLICY IF EXISTS "Users can view own habit completions" ON habit_completions;
+DROP POLICY IF EXISTS "Users can create own habit completions" ON habit_completions;
+DROP POLICY IF EXISTS "Users can delete own habit completions" ON habit_completions;
 CREATE POLICY "Users can view own habit completions"
   ON habit_completions FOR SELECT
   TO authenticated
@@ -166,6 +177,10 @@ CREATE POLICY "Users can delete own habit completions"
   USING (auth.uid() = user_id);
 
 -- Events policies
+DROP POLICY IF EXISTS "Users can view own events" ON events;
+DROP POLICY IF EXISTS "Users can create own events" ON events;
+DROP POLICY IF EXISTS "Users can update own events" ON events;
+DROP POLICY IF EXISTS "Users can delete own events" ON events;
 CREATE POLICY "Users can view own events"
   ON events FOR SELECT
   TO authenticated
