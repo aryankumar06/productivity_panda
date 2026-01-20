@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, CheckSquare, Circle, Clock, AlertCircle, Trash2, Edit2 } from 'lucide-react';
+import { Plus, CheckSquare, Circle, Clock, AlertCircle, Trash2, Edit2, MessageSquare } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
@@ -29,6 +29,10 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
     if (user) {
       fetchTasks();
     }
+
+    const handleOpenModal = () => setShowForm(true);
+    window.addEventListener('open-task-modal', handleOpenModal);
+    return () => window.removeEventListener('open-task-modal', handleOpenModal);
   }, [user, selectedDate]);
 
   const fetchTasks = async () => {
@@ -349,6 +353,15 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
   );
 }
 
+
+interface Comment {
+  id: string;
+  userId: string;
+  userName: string; // Mock, in real app would join users table
+  content: string;
+  timestamp: string;
+}
+
 function TaskItem({
   task,
   onToggle,
@@ -364,8 +377,42 @@ function TaskItem({
   getPriorityColor: (priority: string) => string;
   getPriorityIcon: (priority: string) => React.ReactNode;
 }) {
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [commentCount, setCommentCount] = useState(0);
+
+  useEffect(() => {
+     // Mock fetch comments from localStorage
+     const stored = localStorage.getItem(`comments-${task.id}`);
+     if (stored) {
+         const parsed = JSON.parse(stored);
+         setComments(parsed);
+         setCommentCount(parsed.length);
+     }
+  }, [task.id]);
+
+  const handleAddComment = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newComment.trim()) return;
+
+      const comment: Comment = {
+          id: Date.now().toString(),
+          userId: 'current-user', // Mock
+          userName: 'You',
+          content: newComment,
+          timestamp: new Date().toISOString()
+      };
+
+      const updated = [...comments, comment];
+      setComments(updated);
+      setCommentCount(updated.length);
+      setNewComment('');
+      localStorage.setItem(`comments-${task.id}`, JSON.stringify(updated));
+  };
+
   return (
-    <div className={`p-4 border rounded-lg transition-all ${task.status === 'completed' ? 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700' : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-blue-300'}`}>
+    <div className={`p-4 border rounded-xl transition-all ${task.status === 'completed' ? 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700' : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-blue-300'}`}>
       <div className="flex items-start gap-3">
         <button
           onClick={() => onToggle(task)}
@@ -386,17 +433,55 @@ function TaskItem({
           {task.description && (
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{task.description}</p>
           )}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-3 mt-2">
             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
               {getPriorityIcon(task.priority)}
               {task.priority}
             </span>
             {task.due_date && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Due: {new Date(task.due_date + 'T00:00:00').toLocaleDateString()}
+              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {new Date(task.due_date + 'T00:00:00').toLocaleDateString()}
               </span>
             )}
+            <button 
+                onClick={() => setShowComments(!showComments)}
+                className="text-xs text-gray-500 hover:text-blue-500 flex items-center gap-1 transition-colors"
+                title="View Comments"
+            >
+                <MessageSquare className="w-3 h-3" />
+                {commentCount > 0 ? `${commentCount} comments` : 'Comment'}
+            </button>
           </div>
+
+          {/* Comments Section */}
+          {showComments && (
+              <div className="mt-4 pl-4 border-l-2 border-gray-100 dark:border-neutral-700 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-3 mb-3">
+                      {comments.map(comment => (
+                          <div key={comment.id} className="text-sm">
+                              <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-gray-700 dark:text-gray-300">{comment.userName}</span>
+                                  <span className="text-xs text-gray-400">{new Date(comment.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                              </div>
+                              <p className="text-gray-600 dark:text-gray-400">{comment.content}</p>
+                          </div>
+                      ))}
+                  </div>
+                  <form onSubmit={handleAddComment} className="flex gap-2">
+                      <input 
+                          type="text" 
+                          placeholder="Write a comment..." 
+                          className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          value={newComment}
+                          onChange={e => setNewComment(e.target.value)}
+                      />
+                      <button type="submit" disabled={!newComment.trim()} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg disabled:opacity-50">
+                          Post
+                      </button>
+                  </form>
+              </div>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button

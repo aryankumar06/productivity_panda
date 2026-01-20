@@ -399,6 +399,32 @@ export default function Auth() {
                   />
                 )}
 
+                {isSignUp && (
+                  <div className="grid grid-cols-3 gap-2">
+                     <button
+                       type="button"
+                       onClick={() => localStorage.setItem('productivity-hub-style', 'student')}
+                       className="p-2 border rounded-lg text-xs font-medium hover:bg-white/5 border-gray-700 text-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     >
+                        Student
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => localStorage.setItem('productivity-hub-style', 'professional')}
+                       className="p-2 border rounded-lg text-xs font-medium hover:bg-white/5 border-gray-700 text-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     >
+                        Professional
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => localStorage.setItem('productivity-hub-style', 'creator')}
+                       className="p-2 border rounded-lg text-xs font-medium hover:bg-white/5 border-gray-700 text-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     >
+                        Creator
+                     </button>
+                  </div>
+                )}
+
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
                     {error}
