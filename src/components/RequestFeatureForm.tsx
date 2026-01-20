@@ -15,18 +15,42 @@ export function RequestFeatureForm({ className, variant = 'default' }: RequestFe
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        const subject = encodeURIComponent(`Feature Request: ${title}`);
-        const body = encodeURIComponent(
-            `Feature Title: ${title}\n\nDescription:\n${description}\n\nRequested by: ${user?.email || 'Anonymous'}`
-        );
-        
-        window.open(`mailto:team@elitexsolutions.xyz?subject=${subject}&body=${body}`, '_blank');
-        setIsOpen(false);
-        setTitle('');
-        setDescription('');
+        setStatus('submitting');
+
+        try {
+            const response = await fetch("https://formsubmit.co/ajax/team@elitexsolutions.xyz", {
+                method: "POST",
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    _subject: `New Feature Request: ${title}`,
+                    title,
+                    description,
+                    user_email: user?.email || 'Anonymous',
+                    _template: 'table'
+                })
+            });
+
+            if (response.ok) {
+                setStatus('success');
+                setTimeout(() => {
+                    setIsOpen(false);
+                    setStatus('idle');
+                    setTitle('');
+                    setDescription('');
+                }, 2000);
+            } else {
+                setStatus('error');
+            }
+        } catch (error) {
+            setStatus('error');
+        }
     };
 
     return (
@@ -106,11 +130,31 @@ export function RequestFeatureForm({ className, variant = 'default' }: RequestFe
                                     >
                                         Cancel
                                     </Button>
-                                    <Button type="submit">
-                                        <Send className="w-4 h-4 mr-2" />
-                                        Send Request
+                                    <Button type="submit" disabled={status === 'submitting'}>
+                                        {status === 'submitting' ? (
+                                            "Sending..."
+                                        ) : status === 'success' ? (
+                                            "Sent Automatically!"
+                                        ) : status === 'error' ? (
+                                            "Failed. Try again."
+                                        ) : (
+                                            <>
+                                                <Send className="w-4 h-4 mr-2" />
+                                                Send Request
+                                            </>
+                                        )}
                                     </Button>
                                 </div>
+                                {status === 'success' && (
+                                    <p className="text-green-500 text-sm text-center mt-2">
+                                        Feature request sent successfully!
+                                    </p>
+                                )}
+                                {status === 'error' && (
+                                    <p className="text-red-500 text-sm text-center mt-2">
+                                        Something went wrong. Please try again later.
+                                    </p>
+                                )}
                             </form>
                         </motion.div>
                     </div>
