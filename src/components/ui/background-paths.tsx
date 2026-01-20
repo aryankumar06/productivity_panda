@@ -52,8 +52,10 @@ function FloatingPaths({ position }: { position: number }) {
 
 export function BackgroundPaths({
     title = "Background Paths",
+    description,
 }: {
     title?: string;
+    description?: string;
 }) {
     const words = title.split(" ");
 
@@ -100,6 +102,17 @@ export function BackgroundPaths({
                             </span>
                         ))}
                     </h1>
+
+                    {description && (
+                         <motion.p 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 1, duration: 1 }}
+                            className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-300 mb-10 max-w-2xl mx-auto"
+                         >
+                            {description}
+                         </motion.p>
+                    )}
 
                     <div
                         className="inline-block group relative bg-gradient-to-b from-black/10 to-white/10 
