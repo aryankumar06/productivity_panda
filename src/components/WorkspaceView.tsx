@@ -1,169 +1,439 @@
+/**
+ * WorkspaceView - Enterprise-grade Workspace and Task Management
+ * Features:
+ * - Role-based access control (Manager/Employee)
+ * - Full task lifecycle management
+ * - Member invitation and management
+ * - Real-time updates via Supabase
+ */
+
 import { useState, useEffect } from 'react';
 import { 
-    Users, 
     Plus, 
-    MoreVertical, 
     FolderPlus, 
     Layout, 
     UserPlus,
-    Briefcase
+    Briefcase,
+    Trash2,
+    ChevronRight,
+    Send,
+    X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { supabase } from '../lib/supabase';
+import { usePermissions } from '../hooks/usePermissions';
+import { 
+    TASK_STATUSES, 
+    TASK_PRIORITIES, 
+    getStatusConfig,
+    canTransitionState,
+    getAllowedNextStates,
+    DEFAULT_STATE_TRANSITIONS
+} from '../lib/permissions';
 import { Button } from './ui/button';
-import { Card } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
+import { TaskStatus, WorkspaceRole } from '../lib/database.types';
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 interface Workspace {
     id: string;
     name: string;
-    members: WorkspaceMember[];
-    tasks: WorkspaceTask[];
-    ownerId: string;
+    description: string | null;
+    owner_id: string;
+    created_at: string;
 }
 
 interface WorkspaceMember {
     id: string;
+    workspace_id: string;
+    user_id: string;
+    role: WorkspaceRole;
+    joined_at: string;
+    // Joined from user_profiles
     email?: string;
-    role: 'admin' | 'member';
+    display_name?: string;
 }
 
 interface WorkspaceTask {
     id: string;
+    workspace_id: string;
     title: string;
-    columnId: 'todo' | 'in_progress' | 'review' | 'done';
-    assigneeId?: string;
-    priority: 'low' | 'medium' | 'high';
-    dueDate?: string;
+    description: string | null;
+    status: TaskStatus;
+    priority: string;
+    assignee_id: string | null;
+    created_by: string;
+    due_date: string | null;
+    created_at: string;
 }
 
-const COLUMNS = [
-    { id: 'todo', title: 'To Do', color: 'bg-gray-100 dark:bg-neutral-800' },
-    { id: 'in_progress', title: 'In Progress', color: 'bg-blue-50 dark:bg-blue-900/20' },
-    { id: 'review', title: 'Review', color: 'bg-purple-50 dark:bg-purple-900/20' },
-    { id: 'done', title: 'Done', color: 'bg-green-50 dark:bg-green-900/20' }
-];
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 export default function WorkspaceView() {
     const { user } = useAuth();
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+    const [members, setMembers] = useState<WorkspaceMember[]>([]);
+    const [tasks, setTasks] = useState<WorkspaceTask[]>([]);
+    const [loading, setLoading] = useState(true);
+    
+    // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newWorkspaceName, setNewWorkspaceName] = useState('');
     const [showInviteModal, setShowInviteModal] = useState(false);
+    const [showTaskModal, setShowTaskModal] = useState(false);
+    
+    // Form states
+    const [newWorkspaceName, setNewWorkspaceName] = useState('');
+    const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
     const [inviteEmail, setInviteEmail] = useState('');
+    const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [newTaskPriority, setNewTaskPriority] = useState('medium');
+    const [newTaskAssignee, setNewTaskAssignee] = useState<string | null>(null);
+    const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>('todo');
+    
+    // Permissions
+    const { 
+        role, 
+        isManager, 
+        isEmployee, 
+        isMember,
+        canManageMembers,
+        canInviteUsers,
+        canCreateTasks,
+        canAssignTasks,
+    } = usePermissions(activeWorkspaceId);
 
-    // Load workspaces from localStorage on mount
+    // =========================================================================
+    // DATA FETCHING
+    // =========================================================================
+
     useEffect(() => {
-        const stored = localStorage.getItem('workspaces');
-        if (stored) {
-            setWorkspaces(JSON.parse(stored));
-        } else if (user) {
-            // Initial Seed for new users
-            const initialWorkspace: Workspace = {
-                id: 'ws-1',
-                name: 'My First Project',
-                ownerId: user.id,
-                members: [{ id: user.id, role: 'admin' }],
-                tasks: [
-                    { id: 't-1', title: 'Setup Project', columnId: 'todo', priority: 'high' },
-                    { id: 't-2', title: 'Invite Team', columnId: 'in_progress', priority: 'medium' }
-                ]
-            };
-            setWorkspaces([initialWorkspace]);
-            localStorage.setItem('workspaces', JSON.stringify([initialWorkspace]));
-            setActiveWorkspaceId('ws-1');
+        if (user) {
+            fetchWorkspaces();
         }
     }, [user]);
 
-    const saveWorkspaces = (updated: Workspace[]) => {
-        setWorkspaces(updated);
-        localStorage.setItem('workspaces', JSON.stringify(updated));
+    useEffect(() => {
+        if (activeWorkspaceId) {
+            fetchMembers();
+            fetchTasks();
+
+            // Real-time subscriptions
+            const membersSubscription = supabase
+                .channel('room_members')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'workspace_members',
+                    filter: `workspace_id=eq.${activeWorkspaceId}`
+                }, () => {
+                    fetchMembers();
+                })
+                .subscribe();
+
+            const tasksSubscription = supabase
+                .channel('room_tasks')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'workspace_tasks',
+                    filter: `workspace_id=eq.${activeWorkspaceId}`
+                }, () => {
+                    fetchTasks();
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(membersSubscription);
+                supabase.removeChannel(tasksSubscription);
+            };
+        }
+    }, [activeWorkspaceId]);
+
+    const fetchWorkspaces = async () => {
+        if (!user) return;
+        setLoading(true);
+        
+        // Fetch workspaces where user is a member
+        const { data: memberData } = await supabase
+            .from('workspace_members')
+            .select('workspace_id')
+            .eq('user_id', user.id);
+        
+        if (memberData && memberData.length > 0) {
+            const workspaceIds = memberData.map(m => m.workspace_id);
+            const { data: workspacesData } = await supabase
+                .from('workspaces')
+                .select('*')
+                .in('id', workspaceIds)
+                .order('created_at', { ascending: false });
+            
+            setWorkspaces(workspacesData || []);
+            
+            // Auto-select first workspace if none selected
+            if (!activeWorkspaceId && workspacesData && workspacesData.length > 0) {
+                setActiveWorkspaceId(workspacesData[0].id);
+            }
+        } else {
+            setWorkspaces([]);
+        }
+        
+        setLoading(false);
     };
 
-    const handleCreateWorkspace = (e: React.FormEvent) => {
+    const fetchMembers = async () => {
+        if (!activeWorkspaceId) return;
+        
+        const { data, error } = await supabase
+            .from('workspace_members')
+            .select(`
+                *,
+                user_profiles:user_id (email, display_name)
+            `)
+            .eq('workspace_id', activeWorkspaceId);
+        
+        if (error) {
+            console.error('Error fetching members:', error);
+            return;
+        }
+
+        if (data) {
+            const formattedMembers = data.map((m: any) => ({
+                ...m,
+                email: m.user_profiles?.email,
+                display_name: m.user_profiles?.display_name,
+            }));
+            setMembers(formattedMembers);
+        }
+    };
+
+    const fetchTasks = async () => {
+        if (!activeWorkspaceId) return;
+        
+        const { data } = await supabase
+            .from('workspace_tasks')
+            .select('*')
+            .eq('workspace_id', activeWorkspaceId)
+            .order('created_at', { ascending: false });
+        
+        setTasks(data || []);
+    };
+
+    // =========================================================================
+    // ACTIONS
+    // =========================================================================
+
+    const handleCreateWorkspace = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newWorkspaceName || !user) return;
 
-        const newWorkspace: Workspace = {
-            id: Date.now().toString(),
-            name: newWorkspaceName,
-            ownerId: user.id,
-            members: [{ id: user.id, role: 'admin' }],
-            tasks: []
-        };
+        const { data, error } = await supabase
+            .from('workspaces')
+            .insert({
+                name: newWorkspaceName,
+                description: newWorkspaceDescription || null,
+                owner_id: user.id,
+            })
+            .select()
+            .single();
 
-        const updated = [...workspaces, newWorkspace];
-        saveWorkspaces(updated);
+        if (error) {
+            alert('Failed to create workspace: ' + error.message);
+            return;
+        }
+
+        // Trigger created - owner is auto-added as manager via DB trigger
         setNewWorkspaceName('');
+        setNewWorkspaceDescription('');
         setShowCreateModal(false);
-        setActiveWorkspaceId(newWorkspace.id);
+        await fetchWorkspaces();
+        
+        if (data) {
+            setActiveWorkspaceId(data.id);
+        }
     };
 
-    const handleInviteMember = (e: React.FormEvent) => {
+    const handleInviteMember = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!activeWorkspaceId || !inviteEmail) return;
+        if (!activeWorkspaceId || !inviteEmail || !user) return;
 
-        // In a real app, check if user exists via Supabase
-        // Here we simulate adding them immediately
-        const updatedWorkspaces = workspaces.map(w => {
-            if (w.id === activeWorkspaceId) {
-                return {
-                    ...w,
-                    members: [...w.members, { id: inviteEmail, email: inviteEmail, role: 'member' as const }]
-                };
-            }
-            return w;
-        });
-
-        saveWorkspaces(updatedWorkspaces);
+        const input = inviteEmail.trim();
         
-        // Also simulate an "Invite Sent" notification (local storage logic for Inbox)
-        const storedNotifs = localStorage.getItem('notifications');
-        const notifs = storedNotifs ? JSON.parse(storedNotifs) : [];
-        const newNotif = {
-            id: Date.now().toString(),
-            type: 'alert', // Just to show up
-            title: 'Invite Sent',
-            message: `You invited ${inviteEmail} to ${workspaces.find(w => w.id === activeWorkspaceId)?.name}`,
-            timestamp: new Date().toISOString(),
-            read: false
-        };
-        localStorage.setItem('notifications', JSON.stringify([newNotif, ...notifs]));
+        // Determine if input is email or user code
+        const isEmail = input.includes('@');
+        
+        // Find user by email OR user_code
+        let profileData;
+        if (isEmail) {
+            const { data } = await supabase
+                .from('user_profiles')
+                .select('id, email, user_code')
+                .eq('email', input.toLowerCase())
+                .single();
+            profileData = data;
+        } else {
+            // Treat as user code
+            const { data } = await supabase
+                .from('user_profiles')
+                .select('id, email, user_code')
+                .eq('user_code', input)
+                .single();
+            profileData = data;
+        }
+
+        if (!profileData) {
+            alert(`User not found. ${isEmail ? 'Make sure they have an account with this email.' : 'Check the user code and try again.'}`);
+            return;
+        }
+
+        // Check if already a member
+        const existingMember = members.find(m => m.user_id === profileData.id);
+        if (existingMember) {
+            alert('This user is already a member of this workspace.');
+            return;
+        }
+
+        // Create invite
+        const { error: inviteError } = await supabase
+            .from('workspace_invites')
+            .insert({
+                workspace_id: activeWorkspaceId,
+                inviter_id: user.id,
+                invitee_id: profileData.id,
+                invitee_email: profileData.email,
+            });
+
+        if (inviteError) {
+            alert('Failed to send invite: ' + inviteError.message);
+            return;
+        }
 
         setInviteEmail('');
         setShowInviteModal(false);
-        alert(`Member ${inviteEmail} added to workspace!`);
+        // Do not fetch members yet as they haven't accepted
+        alert(`Invite sent to ${profileData.email || 'User'}! They need to accept it from their Inbox.`);
     };
+
+    const handleRemoveMember = async (memberId: string, memberUserId: string) => {
+        if (!canManageMembers) return;
+        
+        // Cannot remove yourself or the owner
+        const workspace = workspaces.find(w => w.id === activeWorkspaceId);
+        if (memberUserId === workspace?.owner_id) {
+            alert('Cannot remove the workspace owner.');
+            return;
+        }
+
+        const { error } = await supabase
+            .from('workspace_members')
+            .delete()
+            .eq('id', memberId);
+
+        if (error) {
+            alert('Failed to remove member: ' + error.message);
+            return;
+        }
+
+        await fetchMembers();
+    };
+
+    const handleCreateTask = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!activeWorkspaceId || !newTaskTitle || !user || !canCreateTasks) return;
+
+        const { error } = await supabase
+            .from('workspace_tasks')
+            .insert({
+                workspace_id: activeWorkspaceId,
+                title: newTaskTitle,
+                status: newTaskStatus,
+                priority: newTaskPriority,
+                assignee_id: newTaskAssignee,
+                created_by: user.id,
+            });
+
+        if (error) {
+            alert('Failed to create task: ' + error.message);
+            return;
+        }
+
+        setNewTaskTitle('');
+        setNewTaskPriority('medium');
+        setNewTaskAssignee(null);
+        setNewTaskStatus('todo');
+        setShowTaskModal(false);
+        await fetchTasks();
+    };
+
+    const handleUpdateTaskStatus = async (taskId: string, currentStatus: TaskStatus, newStatus: TaskStatus) => {
+        // Check if transition is allowed
+        if (!role || !canTransitionState(role, currentStatus, newStatus, DEFAULT_STATE_TRANSITIONS)) {
+            alert('You are not allowed to make this state transition.');
+            return;
+        }
+
+        const { error } = await supabase
+            .from('workspace_tasks')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', taskId);
+
+        if (error) {
+            alert('Failed to update task: ' + error.message);
+            return;
+        }
+
+        await fetchTasks();
+    };
+
+    const handleDeleteTask = async (taskId: string) => {
+        if (!isManager) return;
+
+        const { error } = await supabase
+            .from('workspace_tasks')
+            .delete()
+            .eq('id', taskId);
+
+        if (error) {
+            alert('Failed to delete task: ' + error.message);
+            return;
+        }
+
+        await fetchTasks();
+    };
+
+    // =========================================================================
+    // RENDER HELPERS
+    // =========================================================================
 
     const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
     
-    // Task Management
-    const addTask = (columnId: WorkspaceTask['columnId'], title: string) => {
-        if (!activeWorkspace) return;
+    // Filter tasks for employees - they only see assigned tasks
+    const visibleTasks = isEmployee && !isManager
+        ? tasks.filter(t => t.assignee_id === user?.id)
+        : tasks;
 
-        const newTask: WorkspaceTask = {
-            id: Date.now().toString(),
-            title,
-            columnId,
-            priority: 'medium',
-            assigneeId: user?.id
-        };
+    const getTasksByStatus = (status: TaskStatus) => visibleTasks.filter(t => t.status === status);
 
-        const updatedWorkspaces = workspaces.map(w => {
-            if (w.id === activeWorkspace.id) {
-                return { ...w, tasks: [...w.tasks, newTask] };
-            }
-            return w;
-        });
-        saveWorkspaces(updatedWorkspaces);
+    const getMemberName = (userId: string | null) => {
+        if (!userId) return 'Unassigned';
+        const member = members.find(m => m.user_id === userId);
+        return member?.display_name || member?.email || userId.slice(0, 8);
     };
 
+    // =========================================================================
+    // RENDER
+    // =========================================================================
+
     return (
-        <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row gap-6 animate-in fade-in">
-            {/* Sidebar: List of Workspaces */}
-            <Card className="w-full md:w-64 flex-shrink-0 h-full flex flex-col border-none shadow-none bg-transparent">
-                <div className="flex items-center justify-between mb-4 px-1">
+        <div className="h-[calc(100vh-180px)] flex flex-col md:flex-row gap-6 animate-in fade-in">
+            {/* Sidebar: Workspace List */}
+            <div className="w-full md:w-64 flex-shrink-0 space-y-4">
+                <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-bold dark:text-white">Workspaces</h2>
                     <Button 
                         size="icon"
@@ -175,136 +445,155 @@ export default function WorkspaceView() {
                     </Button>
                 </div>
 
-                <ScrollArea className="flex-1 -mx-2 px-2">
-                    <div className="space-y-2">
-                    {workspaces.map(w => (
-                        <button
-                            key={w.id}
-                            onClick={() => setActiveWorkspaceId(w.id)}
-                            className={`w-full p-3 rounded-xl border text-left transition-all group ${
-                                activeWorkspaceId === w.id 
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                                    : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 hover:border-blue-400'
-                            }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${activeWorkspaceId === w.id ? 'bg-white/20' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600'}`}>
-                                    <Briefcase className="w-4 h-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate">{w.name}</div>
-                                    <div className={`text-xs mt-0.5 flex items-center gap-1 ${activeWorkspaceId === w.id ? 'text-blue-100' : 'text-gray-500'}`}>
-                                        <Users className="w-3 h-3" />
-                                        {w.members.length} members
-                                    </div>
-                                </div>
+                <ScrollArea className="h-[calc(100vh-320px)]">
+                    <div className="space-y-2 pr-2">
+                        {loading ? (
+                            <div className="text-center py-8 text-gray-400">Loading...</div>
+                        ) : workspaces.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-neutral-800 rounded-xl">
+                                <FolderPlus className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">No workspaces yet</p>
+                                <Button variant="link" onClick={() => setShowCreateModal(true)} className="text-blue-500">
+                                    Create one
+                                </Button>
                             </div>
-                        </button>
-                    ))}
+                        ) : (
+                            workspaces.map(w => (
+                                <button
+                                    key={w.id}
+                                    onClick={() => setActiveWorkspaceId(w.id)}
+                                    className={`w-full p-3 rounded-xl border text-left transition-all group ${
+                                        activeWorkspaceId === w.id 
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                                            : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 hover:border-blue-400'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${activeWorkspaceId === w.id ? 'bg-white/20' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600'}`}>
+                                            <Briefcase className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-medium truncate">{w.name}</div>
+                                        </div>
+                                        <ChevronRight className={`w-4 h-4 ${activeWorkspaceId === w.id ? 'text-white' : 'text-gray-400 opacity-0 group-hover:opacity-100'}`} />
+                                    </div>
+                                </button>
+                            ))
+                        )}
                     </div>
                 </ScrollArea>
-                
-                {workspaces.length === 0 && (
-                        <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-neutral-800 rounded-xl mt-4">
-                            <p className="text-sm">No workspaces yet.</p>
-                            <Button variant="link" onClick={() => setShowCreateModal(true)} className="text-blue-500">Create one</Button>
-                        </div>
-                )}
-            </Card>
+            </div>
 
-            {/* Main Area: Logic/Kanban */}
+            {/* Main Area */}
             <div className="flex-1 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 overflow-hidden flex flex-col shadow-sm">
-                {activeWorkspace ? (
+                {activeWorkspace && isMember ? (
                     <>
-                        {/* Workspace Header */}
+                        {/* Header */}
                         <div className="p-4 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between bg-gray-50/50 dark:bg-neutral-800/50">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <Layout className="w-5 h-5 text-gray-500" />
                                     {activeWorkspace.name}
                                 </h2>
-                                <p className="text-xs text-gray-500">Project Board</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex -space-x-2">
-                                    {activeWorkspace.members.slice(0, 3).map((m, i) => (
-                                        <div key={i} className="w-8 h-8 rounded-full bg-blue-100 border-2 border-white dark:border-neutral-900 flex items-center justify-center text-xs font-bold text-blue-800 uppercase" title={m.email || m.id}>
-                                            {(m.email || m.id).slice(0, 2)}
-                                        </div>
-                                    ))}
-                                    {activeWorkspace.members.length > 3 && (
-                                        <div className="w-8 h-8 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-xs font-bold text-gray-600">
-                                            +{activeWorkspace.members.length - 3}
-                                        </div>
-                                    )}
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                        isManager 
+                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
+                                            : 'bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-gray-300'
+                                    }`}>
+                                        {isManager ? '👑 Manager' : '👤 Employee'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                        {members.length} member{members.length !== 1 ? 's' : ''}
+                                    </span>
                                 </div>
-                                <Button 
-                                    size="sm"
-                                    onClick={() => setShowInviteModal(true)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
-                                >
-                                    <UserPlus className="w-4 h-4" />
-                                    Invite
-                                </Button>
-                                <Button size="icon" variant="ghost">
-                                    <MoreVertical className="w-5 h-5" />
-                                </Button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {canInviteUsers && (
+                                    <Button 
+                                        size="sm"
+                                        onClick={() => setShowInviteModal(true)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                                    >
+                                        <UserPlus className="w-4 h-4" />
+                                        Invite
+                                    </Button>
+                                )}
+                                {canCreateTasks && (
+                                    <Button 
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setShowTaskModal(true)}
+                                        className="gap-2"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Add Task
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
+                        {/* Members Bar */}
+                        <div className="px-4 py-2 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2 overflow-x-auto">
+                            <span className="text-xs text-gray-500 mr-2 flex-shrink-0">Team:</span>
+                            {members.map(m => (
+                                <div 
+                                    key={m.id}
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-neutral-800 rounded-full text-xs flex-shrink-0"
+                                    title={m.email}
+                                >
+                                    <span className={`w-2 h-2 rounded-full ${m.role === 'manager' ? 'bg-purple-500' : 'bg-gray-400'}`} />
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                                        {m.display_name || m.email?.split('@')[0] || 'User'}
+                                    </span>
+                                    {canManageMembers && m.user_id !== user?.id && (
+                                        <button 
+                                            onClick={() => handleRemoveMember(m.id, m.user_id)}
+                                            className="ml-1 text-gray-400 hover:text-red-500"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
                         {/* Kanban Board */}
-                        <ScrollArea className="flex-1 bg-gray-50/30 dark:bg-neutral-900/30">
-                            <div className="flex gap-4 p-4 h-full min-w-[1000px]">
-                                {COLUMNS.map(column => (
-                                    <div key={column.id} className="flex flex-col w-[280px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-3">
+                        <div className="flex-1 bg-gray-50/30 dark:bg-neutral-900/30 overflow-x-auto">
+                            <div className="flex gap-4 p-4 h-full" style={{ minWidth: 'max-content' }}>
+                                {TASK_STATUSES.map(status => (
+                                    <div key={status.id} className="flex flex-col w-[260px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-3">
                                         <div className="flex items-center justify-between mb-3 px-1">
                                             <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
-                                                <span className={`w-2 h-2 rounded-full ${column.id === 'done' ? 'bg-green-500' : 'bg-blue-500'}`} />
-                                                {column.title}
+                                                <span className={`w-2 h-2 rounded-full ${
+                                                    status.id === 'done' ? 'bg-green-500' : 
+                                                    status.id === 'review' ? 'bg-purple-500' :
+                                                    status.id === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
+                                                }`} />
+                                                {status.label}
                                             </h3>
                                             <span className="text-xs text-gray-400 font-mono bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded">
-                                                {activeWorkspace.tasks.filter(t => t.columnId === column.id).length}
+                                                {getTasksByStatus(status.id).length}
                                             </span>
                                         </div>
                                         
-                                        <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1 min-h-[100px]">
-                                            {activeWorkspace.tasks
-                                                .filter(t => t.columnId === column.id)
-                                                .map(task => (
-                                                    <div key={task.id} className="bg-white dark:bg-neutral-900 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-700 group hover:border-blue-400 transition-colors cursor-grab active:cursor-grabbing">
-                                                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">{task.title}</h4>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                                                task.priority === 'high' ? 'bg-red-50 text-red-600' : 
-                                                                task.priority === 'medium' ? 'bg-yellow-50 text-yellow-600' : 
-                                                                'bg-green-50 text-green-600'
-                                                            }`}>
-                                                                {task.priority}
-                                                            </div>
-                                                            {task.assigneeId && (
-                                                                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold">
-                                                                    {task.assigneeId.slice(0, 1)}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[100px]">
+                                            {getTasksByStatus(status.id).map(task => (
+                                                <TaskCard
+                                                    key={task.id}
+                                                    task={task}
+                                                    role={role}
+                                                    isManager={isManager}
+                                                    getMemberName={getMemberName}
+                                                    onUpdateStatus={handleUpdateTaskStatus}
+                                                    onDelete={handleDeleteTask}
+                                                />
+                                            ))}
                                         </div>
-
-                                        <button 
-                                            onClick={() => {
-                                                const title = prompt("Task title:");
-                                                if (title) addTask(column.id as WorkspaceTask['columnId'], title);
-                                            }}
-                                            className="mt-3 w-full py-2 flex items-center justify-center gap-2 text-sm text-gray-500 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded-lg transition-colors border border-dashed border-gray-300 dark:border-neutral-700"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                            Add Task
-                                        </button>
                                     </div>
                                 ))}
                             </div>
-                        </ScrollArea>
+                        </div>
                     </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
@@ -316,47 +605,245 @@ export default function WorkspaceView() {
 
             {/* Create Workspace Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800 p-6">
-                        <h3 className="text-lg font-bold mb-4 dark:text-white">Create Workspace</h3>
-                        <form onSubmit={handleCreateWorkspace}>
+                <Modal onClose={() => setShowCreateModal(false)} title="Create Workspace">
+                    <form onSubmit={handleCreateWorkspace} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Name</label>
                             <input
                                 autoFocus
                                 type="text"
-                                placeholder="Workspace Name (e.g., Marketing Team)"
-                                className="w-full px-4 py-2 mb-4 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
+                                placeholder="e.g., Marketing Team"
+                                className="w-full px-4 py-2 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
                                 value={newWorkspaceName}
                                 onChange={e => setNewWorkspaceName(e.target.value)}
                             />
-                            <div className="flex gap-2 justify-end">
-                                <Button variant="outline" type="button" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                                <Button type="submit" disabled={!newWorkspaceName}>Create</Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Description (optional)</label>
+                            <textarea
+                                placeholder="What is this workspace for?"
+                                className="w-full px-4 py-2 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700 resize-none"
+                                rows={2}
+                                value={newWorkspaceDescription}
+                                onChange={e => setNewWorkspaceDescription(e.target.value)}
+                            />
+                        </div>
+                        <p className="text-xs text-gray-500 bg-gray-50 dark:bg-neutral-800 p-2 rounded-lg">
+                            ✨ You will automatically become the Manager of this workspace.
+                        </p>
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="outline" type="button" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+                            <Button type="submit" disabled={!newWorkspaceName}>Create</Button>
+                        </div>
+                    </form>
+                </Modal>
             )}
 
             {/* Invite Modal */}
             {showInviteModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800 p-6">
-                        <h3 className="text-lg font-bold mb-4 dark:text-white">Invite Member</h3>
-                        <p className="text-sm text-gray-500 mb-4">Enter the User ID or Email of the person you want to invite.</p>
-                        <form onSubmit={handleInviteMember}>
+                <Modal onClose={() => setShowInviteModal(false)} title="Invite Member">
+                    <form onSubmit={handleInviteMember} className="space-y-4">
+                        <p className="text-sm text-gray-500">
+                            Enter the email or <strong>6-digit user code</strong> of the person you want to add.
+                        </p>
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder="email@example.com or 123456"
+                            className="w-full px-4 py-2 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
+                            value={inviteEmail}
+                            onChange={e => setInviteEmail(e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500 bg-gray-50 dark:bg-neutral-800 p-2 rounded-lg">
+                            💡 Users can find their code in Settings. They will be added as an Employee.
+                        </p>
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="outline" type="button" onClick={() => setShowInviteModal(false)}>Cancel</Button>
+                            <Button type="submit" disabled={!inviteEmail} className="gap-2">
+                                <Send className="w-4 h-4" />
+                                Add Member
+                            </Button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {/* Create Task Modal */}
+            {showTaskModal && (
+                <Modal onClose={() => setShowTaskModal(false)} title="Create Task">
+                    <form onSubmit={handleCreateTask} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Title</label>
                             <input
                                 autoFocus
                                 type="text"
-                                placeholder="User Email or ID"
-                                className="w-full px-4 py-2 mb-4 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
-                                value={inviteEmail}
-                                onChange={e => setInviteEmail(e.target.value)}
+                                placeholder="What needs to be done?"
+                                className="w-full px-4 py-2 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
+                                value={newTaskTitle}
+                                onChange={e => setNewTaskTitle(e.target.value)}
                             />
-                            <div className="flex gap-2 justify-end">
-                                <Button variant="outline" type="button" onClick={() => setShowInviteModal(false)}>Cancel</Button>
-                                <Button type="submit" disabled={!inviteEmail}>Send Invite</Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Priority</label>
+                                <select
+                                    className="w-full px-4 py-2 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
+                                    value={newTaskPriority}
+                                    onChange={e => setNewTaskPriority(e.target.value)}
+                                >
+                                    {TASK_PRIORITIES.map(p => (
+                                        <option key={p.id} value={p.id}>{p.label}</option>
+                                    ))}
+                                </select>
                             </div>
-                        </form>
+                            <div>
+                                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Status</label>
+                                <select
+                                    className="w-full px-4 py-2 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
+                                    value={newTaskStatus}
+                                    onChange={e => setNewTaskStatus(e.target.value as TaskStatus)}
+                                >
+                                    {TASK_STATUSES.map(s => (
+                                        <option key={s.id} value={s.id}>{s.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        {canAssignTasks && (
+                            <div>
+                                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Assign to</label>
+                                <select
+                                    className="w-full px-4 py-2 border rounded-xl dark:bg-neutral-800 dark:text-white dark:border-neutral-700"
+                                    value={newTaskAssignee || ''}
+                                    onChange={e => setNewTaskAssignee(e.target.value || null)}
+                                >
+                                    <option value="">Unassigned</option>
+                                    {members.map(m => (
+                                        <option key={m.id} value={m.user_id}>
+                                            {m.display_name || m.email || 'User'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="outline" type="button" onClick={() => setShowTaskModal(false)}>Cancel</Button>
+                            <Button type="submit" disabled={!newTaskTitle}>Create Task</Button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
+// SUB-COMPONENTS
+// =============================================================================
+
+interface ModalProps {
+    onClose: () => void;
+    title: string;
+    children: React.ReactNode;
+}
+
+function Modal({ onClose, title, children }: ModalProps) {
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
+                    <h3 className="text-lg font-bold dark:text-white">{title}</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-4">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface TaskCardProps {
+    task: WorkspaceTask;
+    role: WorkspaceRole | null;
+    isManager: boolean;
+    getMemberName: (userId: string | null) => string;
+    onUpdateStatus: (taskId: string, currentStatus: TaskStatus, newStatus: TaskStatus) => void;
+    onDelete: (taskId: string) => void;
+}
+
+function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDelete }: TaskCardProps) {
+    const [showStatusMenu, setShowStatusMenu] = useState(false);
+    
+    const allowedNextStates = role ? getAllowedNextStates(role, task.status, DEFAULT_STATE_TRANSITIONS) : [];
+    
+    const priorityColors: Record<string, string> = {
+        low: 'bg-gray-100 text-gray-600',
+        medium: 'bg-yellow-100 text-yellow-700',
+        high: 'bg-orange-100 text-orange-700',
+        urgent: 'bg-red-100 text-red-700',
+    };
+
+    return (
+        <div className="bg-white dark:bg-neutral-900 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-700 group hover:border-blue-400 transition-colors">
+            <div className="flex items-start justify-between mb-2">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1">{task.title}</h4>
+                {isManager && (
+                    <button 
+                        onClick={() => onDelete(task.id)}
+                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+            
+            <div className="flex items-center justify-between gap-2 text-xs">
+                <span className={`px-2 py-0.5 rounded-full font-medium shrink-0 ${priorityColors[task.priority] || priorityColors.medium}`}>
+                    {task.priority}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400 truncate text-right" title={getMemberName(task.assignee_id)}>
+                    {getMemberName(task.assignee_id)}
+                </span>
+            </div>
+
+            {allowedNextStates.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800">
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowStatusMenu(!showStatusMenu)}
+                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                        >
+                            Move to...
+                            <ChevronRight className={`w-3 h-3 transition-transform ${showStatusMenu ? 'rotate-90' : ''}`} />
+                        </button>
+                        
+                        {showStatusMenu && (
+                            <div className="absolute left-0 top-6 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                                {allowedNextStates.map(status => {
+                                    const config = getStatusConfig(status);
+                                    return (
+                                        <button
+                                            key={status}
+                                            onClick={() => {
+                                                onUpdateStatus(task.id, task.status, status);
+                                                setShowStatusMenu(false);
+                                            }}
+                                            className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-2"
+                                        >
+                                            <span className={`w-2 h-2 rounded-full ${
+                                                status === 'done' ? 'bg-green-500' : 
+                                                status === 'review' ? 'bg-purple-500' :
+                                                status === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
+                                            }`} />
+                                            {config.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

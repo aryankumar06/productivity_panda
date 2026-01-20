@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useStyle } from '../contexts/StyleContext';
 import { ThemeToggle } from './ui/theme-toggle';
 import { 
@@ -7,17 +8,105 @@ import {
     GraduationCap, 
     PenTool, 
     Keyboard,
-    Command,
     Moon,
-    Monitor,
     User,
-    Copy
+    Copy,
+    Building2,
+    Mail,
+    Hash
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+
+// List of personal email providers - don't show org for these
+const PERSONAL_EMAIL_PROVIDERS = [
+    'gmail.com', 'googlemail.com',
+    'yahoo.com', 'yahoo.co.in', 'yahoo.co.uk',
+    'hotmail.com', 'live.com', 'outlook.com', 'msn.com',
+    'icloud.com', 'me.com', 'mac.com',
+    'aol.com', 'protonmail.com', 'proton.me',
+    'zoho.com', 'yandex.com', 'mail.com',
+    'gmx.com', 'tutanota.com', 'fastmail.com',
+    'rediffmail.com', 'inbox.com'
+];
+
+// Generate a random 6-digit numeric code
+const generateUserCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 export default function SettingsView() {
     const { style, setStyle } = useStyle();
     const { user } = useAuth();
+    const [userCode, setUserCode] = useState<string | null>(null);
+    const [loadingCode, setLoadingCode] = useState(true);
+
+    // Fetch or generate user code on mount
+    useEffect(() => {
+        const fetchOrCreateUserCode = async () => {
+            if (!user) return;
+            
+            // Try to fetch existing user code
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('user_code')
+                .eq('id', user.id)
+                .single();
+            
+            if (profile?.user_code) {
+                setUserCode(profile.user_code);
+                setLoadingCode(false);
+                return;
+            }
+            
+            // Generate new code if not exists
+            const newCode = generateUserCode();
+            
+            // Upsert profile with new code
+            const { error } = await supabase
+                .from('user_profiles')
+                .upsert({
+                    id: user.id,
+                    email: user.email,
+                    user_code: newCode,
+                }, { onConflict: 'id' });
+            
+            if (!error) {
+                setUserCode(newCode);
+            }
+            setLoadingCode(false);
+        };
+        
+        fetchOrCreateUserCode();
+    }, [user]);
+
+    // Extract user info from email
+    const getUserInfo = () => {
+        const email = user?.email || '';
+        if (!email) return { name: 'User', organization: null, isPersonal: true };
+        
+        const [localPart, domain] = email.split('@');
+        
+        // Format name from email local part (e.g., aryan.kumar -> Aryan Kumar)
+        const name = localPart
+            .split(/[._-]/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+        
+        // Check if it's a personal email provider
+        const isPersonal = PERSONAL_EMAIL_PROVIDERS.includes(domain?.toLowerCase());
+        
+        // Extract organization name from domain (e.g., chaatify.com -> Chaatify)
+        let organization = null;
+        if (!isPersonal && domain) {
+            const orgName = domain.split('.')[0]; // Get part before .com/.org etc.
+            organization = orgName.charAt(0).toUpperCase() + orgName.slice(1).toLowerCase();
+        }
+        
+        return { name, organization, isPersonal };
+    };
+
+    const userInfo = getUserInfo();
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -27,32 +116,82 @@ export default function SettingsView() {
             </div>
 
             <div className="grid gap-6">
-                {/* User Identity Section */}
+                {/* User Profile Section */}
                 <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 border border-gray-200 dark:border-neutral-800">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-green-600 dark:text-green-400">
                             <User className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold dark:text-white">Account Identity</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Share this ID to be invited to workspaces.</p>
+                            <h3 className="text-lg font-semibold dark:text-white">Profile</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Your account information.</p>
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-neutral-800/50 rounded-xl border border-gray-100 dark:border-neutral-800">
-                        <div className="flex-1 font-mono text-sm text-gray-600 dark:text-gray-300 break-all">
-                            {user?.id || 'Not signed in'}
+                    <div className="space-y-4">
+                        {/* User Name */}
+                        <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-neutral-800/50 rounded-xl border border-gray-100 dark:border-neutral-800">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Name</p>
+                                <p className="font-medium text-gray-900 dark:text-white">{userInfo.name}</p>
+                            </div>
                         </div>
-                        <button 
-                            onClick={() => {
-                                navigator.clipboard.writeText(user?.id || '');
-                                alert('User ID copied to clipboard!');
-                            }}
-                            className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-                            title="Copy ID"
-                        >
-                            <Copy className="w-5 h-5" />
-                        </button>
+
+                        {/* Email */}
+                        <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-neutral-800/50 rounded-xl border border-gray-100 dark:border-neutral-800">
+                            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                                <Mail className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Email</p>
+                                <p className="font-medium text-gray-900 dark:text-white">{user?.email || 'Not signed in'}</p>
+                            </div>
+                        </div>
+
+                        {/* Organization - Only show if not a personal email */}
+                        {userInfo.organization && (
+                            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-neutral-800/50 rounded-xl border border-gray-100 dark:border-neutral-800">
+                                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                                    <Building2 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Organization</p>
+                                    <p className="font-medium text-gray-900 dark:text-white">{userInfo.organization}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* User Code - For workspace invites */}
+                        <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
+                            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                                <Hash className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Your Invite Code</p>
+                                <p className="font-mono text-2xl font-bold tracking-widest text-indigo-600 dark:text-indigo-400">
+                                    {loadingCode ? '------' : (userCode || 'N/A')}
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    Share this code to get added to workspaces
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    if (userCode) {
+                                        navigator.clipboard.writeText(userCode);
+                                        alert('Invite code copied!');
+                                    }
+                                }}
+                                className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors"
+                                title="Copy Code"
+                                disabled={!userCode}
+                            >
+                                <Copy className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
 

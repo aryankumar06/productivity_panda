@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  CheckSquare, 
-  LogOut,
-  Calendar,
-} from 'lucide-react';
+import { CheckSquare, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskSection from './TaskSection';
 import HabitSection from './HabitSection';
@@ -28,7 +24,7 @@ type TabType = 'Your Day' | 'Inbox' | 'Dashboard' | 'Tasks' | 'Habits' | 'Events
 
 
 export default function Dashboard() {
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
 
@@ -39,16 +35,6 @@ export default function Dashboard() {
           const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
           setSelectedDate(adjustedDate.toISOString().split('T')[0]);
       }
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
   };
 
   const renderContent = () => {
