@@ -6,8 +6,8 @@ import { supabase } from '../lib/supabase';
 
 type AuthMode = 'signin' | 'signup' | 'otp-request' | 'otp-verify';
 
+
 export default function Auth() {
-  const { theme, toggleTheme } = useTheme();
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
