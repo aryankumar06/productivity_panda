@@ -10,11 +10,13 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
   const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     setLoading(true);
 
     const { error: authError } = isSignUp
@@ -23,6 +25,8 @@ export default function Auth() {
 
     if (authError) {
       setError(authError.message);
+    } else if (isSignUp) {
+      setMessage('Check your email to confirm your account, then return here to sign in.');
     }
 
     setLoading(false);
@@ -84,6 +88,12 @@ export default function Auth() {
               {error}
             </div>
           )}
+
+        {message && (
+          <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-lg text-sm">
+            {message}
+          </div>
+        )}
 
           <button
             type="submit"
