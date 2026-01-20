@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, UserPlus, Sun, Moon, Mail, KeyRound } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { LogIn, UserPlus, Mail, KeyRound } from 'lucide-react';
+import { ThemeToggle } from './ui/theme-toggle';
 import { supabase } from '../lib/supabase';
 
 type AuthMode = 'signin' | 'signup' | 'otp-request' | 'otp-verify';
@@ -157,13 +157,7 @@ export default function Auth() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-neutral-900 dark:to-neutral-800 flex items-center justify-center p-4">
       <div className={`bg-white dark:bg-neutral-800 rounded-2xl shadow-xl p-8 w-full max-w-md transition-all duration-300 ${isSignUp ? 'ring-1 ring-blue-100 dark:ring-neutral-700' : ''}`}>
         <div className="flex justify-end mb-2">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+          <ThemeToggle />
         </div>
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">

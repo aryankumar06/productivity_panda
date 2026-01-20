@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Calendar, CheckSquare, Sun, Moon } from 'lucide-react';
+import { LogOut, Calendar, CheckSquare } from 'lucide-react';
 import TaskSection from './TaskSection';
 import HabitSection from './HabitSection';
 import EventSection from './EventSection';
-import { useTheme } from '../contexts/ThemeContext';
+import { GlowingEffect } from './ui/GlowingEffect';
+import { ThemeToggle } from './ui/theme-toggle';
 
 export default function Dashboard() {
   const { signOut, user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const { theme, toggleTheme } = useTheme();
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -37,13 +37,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={toggleTheme}
-                className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
+              <ThemeToggle />
               <button
                 onClick={signOut}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -74,10 +68,40 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <TaskSection selectedDate={selectedDate} />
-            <EventSection selectedDate={selectedDate} />
+            {/* Task Section with Glowing Effect */}
+            <div className="relative rounded-xl">
+              <GlowingEffect
+                spread={40}
+                glow={true}
+                proximity={64}
+                inactiveZone={0.01}
+                borderWidth={2}
+              />
+              <TaskSection selectedDate={selectedDate} />
+            </div>
+            
+            {/* Event Section with Glowing Effect */}
+            <div className="relative rounded-xl">
+              <GlowingEffect
+                spread={40}
+                glow={true}
+                proximity={64}
+                inactiveZone={0.01}
+                borderWidth={2}
+              />
+              <EventSection selectedDate={selectedDate} />
+            </div>
           </div>
-          <div>
+          
+          {/* Habit Section with Glowing Effect */}
+          <div className="relative rounded-xl">
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={2}
+            />
             <HabitSection selectedDate={selectedDate} />
           </div>
         </div>
@@ -85,3 +109,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
