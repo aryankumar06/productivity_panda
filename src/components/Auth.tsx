@@ -1,23 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, UserPlus, Mail, KeyRound, AtSignIcon, AppleIcon, GithubIcon, Grid2X2, ChevronLeftIcon } from 'lucide-react';
+import { AtSignIcon, ChevronLeftIcon, KeyRound, Grid2X2, Apple, Github } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { FloatingPaths, GoogleIcon } from './ui/auth-helpers';
 import { supabase } from '../lib/supabase';
 
-type AuthMode = 'signin' | 'signup' | 'otp-request' | 'otp-verify';
+type AuthMode = 'signin' | 'signup' | 'magic-link' | 'forgot-password' | 'reset-password';
+type UserType = 'student' | 'creator' | 'professional';
 
 export default function Auth() {
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otpCode, setOtpCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [resending, setResending] = useState(false);
+  const [userType, setUserType] = useState<UserType>('professional');
   const { signIn, signUp } = useAuth();
+
+  // Check for password reset token in URL
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const type = hashParams.get('type');
+    
+    if (accessToken && type === 'recovery') {
+      setAuthMode('reset-password');
+    }
+  }, []);
 
   // Force dark mode on Auth page
   useEffect(() => {
@@ -28,29 +42,64 @@ export default function Auth() {
   }, []);
 
   const isSignUp = authMode === 'signup';
-  const isOtpRequest = authMode === 'otp-request';
-  const isOtpVerify = authMode === 'otp-verify';
+  const isMagicLink = authMode === 'magic-link';
+  const isForgotPassword = authMode === 'forgot-password';
+  const isResetPassword = authMode === 'reset-password';
 
+  // Handle regular sign in/signup with password
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
     setLoading(true);
 
-    const { error: authError } = isSignUp
-      ? await signUp(email, password)
-      : await signIn(email, password);
-
-    if (authError) {
-      setError(authError.message);
-    } else if (isSignUp) {
-      setMessage('Check your email to confirm your account, then return here to sign in.');
+    if (isSignUp) {
+      const { data, error: authError } = await signUp(email, password);
+      
+      if (authError) {
+        if (authError.message.includes('already registered') || 
+            authError.message.includes('User already registered')) {
+          const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: email,
+          });
+          
+          if (resendError) {
+            setError('Account exists. Please sign in or check your email for verification link.');
+          } else {
+            setMessage('A new verification link has been sent to your email!');
+          }
+        } else {
+          setError(authError.message);
+        }
+      } else if (data?.user) {
+        localStorage.setItem('productivity-hub-style', userType);
+        
+        // Create user profile
+        await supabase.from('user_profiles').upsert({
+          id: data.user.id,
+          email: data.user.email,
+          user_type: userType,
+        });
+        
+        setMessage('Check your email to confirm your account, then return here to sign in.');
+      }
+    } else {
+      const { error: authError } = await signIn(email, password);
+      if (authError) {
+        if (authError.message.includes('Email not confirmed')) {
+          setError('Email not confirmed. Check your inbox or click "Resend confirmation email".');
+        } else {
+          setError(authError.message);
+        }
+      }
     }
 
     setLoading(false);
   };
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
+  // Handle magic link request
+  const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
@@ -66,46 +115,87 @@ export default function Auth() {
         email,
         options: {
           shouldCreateUser: false,
+          emailRedirectTo: window.location.origin,
         },
       });
 
       if (error) {
         setError(error.message);
       } else {
-        setMessage('Check your email for the login link or enter the 6-digit code below.');
-        setAuthMode('otp-verify');
+        setMessage('Check your email for the magic link to sign in!');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  // Handle forgot password - send reset email
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
     
-    if (!otpCode || otpCode.length !== 6) {
-      setError('Please enter the 6-digit code from your email');
+    if (!email) {
+      setError('Please enter your email address');
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otpCode,
-        type: 'email',
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
       });
 
       if (error) {
         setError(error.message);
+      } else {
+        setMessage('Check your email for the password reset link!');
       }
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle password reset (when user clicks link from email)
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setMessage('Password updated successfully! You can now sign in with your new password.');
+        // Clear the hash from URL
+        window.history.replaceState(null, '', window.location.pathname);
+        setTimeout(() => {
+          setAuthMode('signin');
+          setNewPassword('');
+          setConfirmPassword('');
+        }, 2000);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle resend confirmation email
   const handleResend = async () => {
     setError('');
     setMessage('');
@@ -127,27 +217,8 @@ export default function Auth() {
     }
   };
 
-  const handleResendOtp = async () => {
-    setError('');
-    setMessage('');
-    setResending(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
-        },
-      });
-      if (error) setError(error.message);
-      else setMessage('A new code has been sent to your email.');
-    } finally {
-      setResending(false);
-    }
-  };
-
   const resetToSignIn = () => {
     setAuthMode('signin');
-    setOtpCode('');
     setError('');
     setMessage('');
   };
@@ -155,18 +226,20 @@ export default function Auth() {
   const getTitle = () => {
     switch (authMode) {
       case 'signup': return 'Create Account';
-      case 'otp-request': return 'Forgot Password?';
-      case 'otp-verify': return 'Enter Code';
+      case 'magic-link': return 'Magic Link Sign In';
+      case 'forgot-password': return 'Reset Password';
+      case 'reset-password': return 'Set New Password';
       default: return 'Sign In or Join Now!';
     }
   };
 
   const getSubtitle = () => {
     switch (authMode) {
-      case 'signup': return 'Create your asme account';
-      case 'otp-request': return 'We\'ll send you a code to sign in';
-      case 'otp-verify': return 'Enter the code sent to your email';
-      default: return 'login or create your asme account.';
+      case 'signup': return 'Create your productivity hub account';
+      case 'magic-link': return 'We\'ll send you a magic link to sign in';
+      case 'forgot-password': return 'Enter your email to receive a password reset link';
+      case 'reset-password': return 'Enter your new password below';
+      default: return 'Sign in to your productivity hub account';
     }
   };
 
@@ -227,7 +300,7 @@ export default function Auth() {
             </div>
 
             {/* Social Login Buttons - Only show on main sign in/signup */}
-            {!isOtpRequest && !isOtpVerify && (
+            {!isMagicLink && !isForgotPassword && !isResetPassword && (
               <>
                 <div className="space-y-3">
                   <Button 
@@ -241,14 +314,14 @@ export default function Auth() {
                     type="button" 
                     className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
                   >
-                    <AppleIcon className="size-5 me-2" />
+                    <Apple className="size-5 me-2" />
                     Continue with Apple
                   </Button>
                   <Button 
                     type="button" 
                     className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
                   >
-                    <GithubIcon className="size-5 me-2" />
+                    <Github className="size-5 me-2" />
                     Continue with GitHub
                   </Button>
                 </div>
@@ -261,11 +334,11 @@ export default function Auth() {
               </>
             )}
 
-            {/* OTP Request Form */}
-            {isOtpRequest && (
-              <form onSubmit={handleRequestOtp} className="space-y-4">
+            {/* Magic Link Form */}
+            {isMagicLink && (
+              <form onSubmit={handleMagicLink} className="space-y-4">
                 <p className="text-gray-400 text-sm">
-                  Enter your email address to receive a sign-in code
+                  Enter your email address to receive a magic link
                 </p>
                 <div className="relative">
                   <Input
@@ -296,7 +369,7 @@ export default function Auth() {
                   className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
                   disabled={loading || !email}
                 >
-                  {loading ? 'Sending...' : 'Send Login Code'}
+                  {loading ? 'Sending...' : 'Send Magic Link'}
                 </Button>
 
                 <Button
@@ -311,21 +384,23 @@ export default function Auth() {
               </form>
             )}
 
-            {/* OTP Verify Form */}
-            {isOtpVerify && (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <Input
-                  type="text"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  required
-                  maxLength={6}
-                  className="w-full bg-gray-900 border-gray-700 text-white text-center text-2xl tracking-widest font-mono h-14"
-                  placeholder="000000"
-                />
-                <p className="text-xs text-gray-500 text-center">
-                  Enter the code sent to <strong className="text-white">{email}</strong>
+            {/* Forgot Password Form */}
+            {isForgotPassword && (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <p className="text-gray-400 text-sm">
+                  Enter your email and we'll send you a link to reset your password
                 </p>
+                <div className="relative">
+                  <Input
+                    placeholder="your.email@example.com"
+                    className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12 pl-10"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <AtSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-500" />
+                </div>
 
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
@@ -334,7 +409,7 @@ export default function Auth() {
                 )}
 
                 {message && (
-                  <div className="bg-blue-500/10 border border-blue-500/50 text-blue-400 px-4 py-3 rounded-lg text-sm">
+                  <div className="bg-green-500/10 border border-green-500/50 text-green-400 px-4 py-3 rounded-lg text-sm">
                     {message}
                   </div>
                 )}
@@ -342,19 +417,9 @@ export default function Auth() {
                 <Button 
                   type="submit" 
                   className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
-                  disabled={loading || otpCode.length !== 6}
+                  disabled={loading || !email}
                 >
-                  {loading ? 'Verifying...' : 'Verify & Sign In'}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleResendOtp}
-                  disabled={resending}
-                  className="w-full text-gray-400 hover:text-white hover:bg-white/10"
-                >
-                  {resending ? 'Sending...' : 'Resend Code'}
+                  {loading ? 'Sending...' : 'Send Reset Link'}
                 </Button>
 
                 <Button
@@ -369,8 +434,59 @@ export default function Auth() {
               </form>
             )}
 
+            {/* Reset Password Form (after clicking email link) */}
+            {isResetPassword && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="relative">
+                  <Input
+                    placeholder="New password"
+                    className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12 pl-10"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-500" />
+                </div>
+
+                <div className="relative">
+                  <Input
+                    placeholder="Confirm new password"
+                    className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12 pl-10"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-500" />
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {message && (
+                  <div className="bg-green-500/10 border border-green-500/50 text-green-400 px-4 py-3 rounded-lg text-sm">
+                    {message}
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                  disabled={loading || !newPassword || !confirmPassword}
+                >
+                  {loading ? 'Updating...' : 'Update Password'}
+                </Button>
+              </form>
+            )}
+
             {/* Regular Sign In / Sign Up Form */}
-            {!isOtpRequest && !isOtpVerify && (
+            {!isMagicLink && !isForgotPassword && !isResetPassword && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <p className="text-gray-400 text-sm">
                   Enter your email address to sign in or create an account
@@ -388,15 +504,59 @@ export default function Auth() {
                   <AtSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-500" />
                 </div>
 
-                {!isSignUp && (
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+
+                {isSignUp && (
+                  <div className="space-y-2">
+                     <p className="text-xs text-gray-500">I am a...</p>
+                     <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setUserType('student')}
+                          className={`p-3 border rounded-lg text-xs font-medium transition-all ${
+                            userType === 'student'
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'hover:bg-white/5 border-gray-700 text-gray-300'
+                          }`}
+                        >
+                           🎓 Student
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUserType('professional')}
+                          className={`p-3 border rounded-lg text-xs font-medium transition-all ${
+                            userType === 'professional'
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'hover:bg-white/5 border-gray-700 text-gray-300'
+                          }`}
+                        >
+                           💼 Professional
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUserType('creator')}
+                          className={`p-3 border rounded-lg text-xs font-medium transition-all ${
+                            userType === 'creator'
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'hover:bg-white/5 border-gray-700 text-gray-300'
+                          }`}
+                        >
+                           🎨 Creator
+                        </button>
+                     </div>
+                     {userType === 'professional' && (
+                        <p className="text-xs text-blue-400 bg-blue-500/10 p-2 rounded-lg">
+                           ✨ Professionals get access to Workspace & Team management features!
+                        </p>
+                     )}
+                  </div>
                 )}
 
                 {error && (
@@ -431,19 +591,30 @@ export default function Auth() {
                   </Button>
                 )}
 
-                {/* Forgot Password Link - Only show on Sign In */}
+                {/* Forgot Password & Magic Link - Only show on Sign In */}
                 {!isSignUp && (
-                  <div className="text-center">
+                  <div className="flex flex-col gap-2 text-center">
                     <button
                       type="button"
                       onClick={() => {
-                        setAuthMode('otp-request');
+                        setAuthMode('forgot-password');
                         setError('');
                         setMessage('');
                       }}
                       className="text-gray-400 hover:text-white text-sm"
                     >
-                      Forgot password? Sign in with code
+                      Forgot password?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('magic-link');
+                        setError('');
+                        setMessage('');
+                      }}
+                      className="text-blue-400 hover:text-blue-300 text-sm"
+                    >
+                      Sign in with magic link instead
                     </button>
                   </div>
                 )}

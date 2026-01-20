@@ -35,6 +35,10 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
     if (user) {
       fetchHabits();
     }
+
+    const handleOpenModal = () => setShowForm(true);
+    window.addEventListener('open-habit-modal', handleOpenModal);
+    return () => window.removeEventListener('open-habit-modal', handleOpenModal);
   }, [user, selectedDate]);
 
   const fetchHabits = async () => {

@@ -101,7 +101,7 @@ const Tab = ({
           opacity: 1,
         });
       }}
-      className={`relative z-10 block cursor-pointer px-3 py-1.5 text-xs uppercase md:px-5 md:py-3 md:text-base transition-colors duration-500 ${
+      className={`relative z-10 block cursor-pointer px-3 py-1.5 text-xs uppercase whitespace-nowrap md:px-5 md:py-3 md:text-base transition-colors duration-500 ${
           isActive ? "text-white mix-blend-difference" : "text-neutral-600 dark:text-neutral-400 hover:text-white hover:mix-blend-difference"
       }`}
     >

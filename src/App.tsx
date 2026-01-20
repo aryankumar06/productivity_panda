@@ -3,6 +3,7 @@ import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import TermsOfService from './components/TermsOfService';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import { CommandPalette } from './components/CommandPalette';
 import LandingPage from './components/LandingPage';
 
 function App() {
@@ -29,8 +30,13 @@ function App() {
   }
 
   if (user) {
-    return <Dashboard />;
-  }
+    return (
+    <>
+      {user && <CommandPalette />}
+      {user ? <Dashboard /> : <Auth />}
+    </>
+  );
+}
 
   if (path === '/login' || path === '/signup') {
     return <Auth />;

@@ -28,6 +28,10 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
     if (user) {
       fetchEvents();
     }
+
+    const handleOpenModal = () => setShowForm(true);
+    window.addEventListener('open-event-modal', handleOpenModal);
+    return () => window.removeEventListener('open-event-modal', handleOpenModal);
   }, [user, selectedDate]);
 
   const fetchEvents = async () => {

@@ -1,36 +1,45 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Calendar, CheckSquare } from 'lucide-react';
+import { CheckSquare, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskSection from './TaskSection';
 import HabitSection from './HabitSection';
 import EventSection from './EventSection';
-import { GlowingEffect } from './ui/GlowingEffect';
+import { GlowingEffect } from './ui/GlowingEffect'; 
 import { ThemeToggle } from './ui/theme-toggle';
 import { RequestFeatureForm } from './RequestFeatureForm';
+import InboxView from './InboxView';
+import EisenhowerMatrix from './EisenhowerMatrix';
+import WorkspaceView from './WorkspaceView';
+import AnalyticsSection from './AnalyticsSection';
+import SettingsView from './SettingsView';
 import { SlideTabs } from './ui/slide-tabs';
-import { CustomCursor } from './ui/custom-cursor';
+import { CalendarWithPresets } from './ui/calendar-presets';
 
-type TabType = 'Overview' | 'Tasks' | 'Habits' | 'Events';
+// import { CustomCursor } from './ui/custom-cursor'; // Component not found
+
+type TabType = 'Your Day' | 'Inbox' | 'Dashboard' | 'Tasks' | 'Habits' | 'Events' | 'Analytics' | 'Workspaces' | 'Settings';
+
+
+
 
 export default function Dashboard() {
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [activeTab, setActiveTab] = useState<TabType>('Overview');
+  const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const handleDateChange = (date: Date | undefined) => {
+      if (date) {
+          // Adjust for timezone offset to prevent off-by-one errors when converting to string
+          const offset = date.getTimezoneOffset();
+          const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
+          setSelectedDate(adjustedDate.toISOString().split('T')[0]);
+      }
   };
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'Overview':
+      case 'Dashboard':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
@@ -48,6 +57,24 @@ export default function Dashboard() {
               <HabitSection selectedDate={selectedDate} />
             </div>
           </div>
+        );
+      case 'Your Day':
+        return (
+          <div className="max-w-6xl mx-auto h-full">
+            <EisenhowerMatrix />
+          </div>
+        );
+      case 'Inbox':
+        return (
+           <div className="max-w-4xl mx-auto">
+             <InboxView />
+           </div>
+        );
+      case 'Workspaces':
+        return (
+            <div className="max-w-6xl mx-auto">
+                <WorkspaceView />
+            </div>
         );
       case 'Tasks':
         return (
@@ -70,6 +97,18 @@ export default function Dashboard() {
             <EventSection selectedDate={selectedDate} />
           </div>
         );
+      case 'Analytics':
+        return (
+           <div className="max-w-6xl mx-auto">
+             <AnalyticsSection />
+           </div>
+        );
+      case 'Settings':
+        return (
+            <div className="max-w-4xl mx-auto">
+                <SettingsView />
+            </div>
+        );
       default:
         return null;
     }
@@ -77,7 +116,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 transition-colors duration-300">
-      <CustomCursor />
       
       <header className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -98,7 +136,7 @@ export default function Dashboard() {
             </div>
 
             <SlideTabs 
-                tabs={['Overview', 'Tasks', 'Habits', 'Events']} 
+                tabs={['Your Day', 'Inbox', 'Dashboard', 'Workspaces', 'Analytics', 'Settings']} 
                 activeTab={activeTab} 
                 onChange={(tab) => setActiveTab(tab as TabType)}
                 className="hidden md:flex"
@@ -119,7 +157,7 @@ export default function Dashboard() {
             {/* Mobile Navigation */}
             <div className="md:hidden w-full overflow-x-auto pb-2">
                  <SlideTabs 
-                    tabs={['Overview', 'Tasks', 'Habits', 'Events']} 
+                    tabs={['Your Day', 'Inbox', 'Dashboard', 'Workspaces', 'Settings']} 
                     activeTab={activeTab} 
                     onChange={(tab) => setActiveTab(tab as TabType)}
                 />
@@ -129,19 +167,26 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{formatDate(selectedDate)}</h2>
-            </div>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all hover:border-blue-400"
-            />
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold dark:text-white mb-1">{activeTab}</h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              {activeTab === 'Your Day' ? 'Focus on what matters most.' : 
+               activeTab === 'Dashboard' ? 'Your productivity at a glance.' :
+               activeTab === 'Inbox' ? 'Stay updated with your team.' :
+               activeTab === 'Workspaces' ? 'Manage your projects and teams.' :
+               'Manage your productivity.'}
+            </p>
           </div>
+          
+          {(activeTab === 'Dashboard' || activeTab === 'Tasks' || activeTab === 'Habits' || activeTab === 'Events') && (
+            <div className="flex items-center gap-3">
+               <CalendarWithPresets 
+                    date={selectedDate ? new Date(selectedDate) : undefined} 
+                    setDate={handleDateChange} 
+               />
+            </div>
+          )}
         </div>
 
         <AnimatePresence mode="wait">
