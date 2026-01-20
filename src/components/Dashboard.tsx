@@ -6,6 +6,7 @@ import HabitSection from './HabitSection';
 import EventSection from './EventSection';
 import { GlowingEffect } from './ui/GlowingEffect';
 import { ThemeToggle } from './ui/theme-toggle';
+import { RequestFeatureForm } from './RequestFeatureForm';
 
 export default function Dashboard() {
   const { signOut, user } = useAuth();
@@ -33,10 +34,11 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Productivity Hub</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Productivity hub a elitexsolution&apos;s product.</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">An EliteX Solutions Product</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <RequestFeatureForm variant="outline" className="hidden sm:flex" />
               <ThemeToggle />
               <button
                 onClick={signOut}
