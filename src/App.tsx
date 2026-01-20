@@ -1,9 +1,21 @@
 import { useAuth } from './contexts/AuthContext';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import TermsOfService from './components/TermsOfService';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import LandingPage from './components/LandingPage';
 
 function App() {
   const { user, loading } = useAuth();
+
+  // Check for legal pages
+  const path = window.location.pathname;
+  if (path === '/terms-of-service') {
+    return <TermsOfService />;
+  }
+  if (path === '/privacy-policy') {
+    return <PrivacyPolicy />;
+  }
 
   if (loading) {
     return (
@@ -16,7 +28,15 @@ function App() {
     );
   }
 
-  return user ? <Dashboard /> : <Auth />;
+  if (user) {
+    return <Dashboard />;
+  }
+
+  if (path === '/login' || path === '/signup') {
+    return <Auth />;
+  }
+
+  return <LandingPage />;
 }
 
 export default App;

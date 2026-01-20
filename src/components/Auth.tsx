@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, UserPlus, Mail, KeyRound } from 'lucide-react';
-import { ThemeToggle } from './ui/theme-toggle';
+import { LogIn, UserPlus, Mail, KeyRound, AtSignIcon, AppleIcon, GithubIcon, Grid2X2, ChevronLeftIcon } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { FloatingPaths, GoogleIcon } from './ui/auth-helpers';
 import { supabase } from '../lib/supabase';
 
 type AuthMode = 'signin' | 'signup' | 'otp-request' | 'otp-verify';
-
 
 export default function Auth() {
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
@@ -17,6 +18,14 @@ export default function Auth() {
   const [message, setMessage] = useState('');
   const [resending, setResending] = useState(false);
   const { signIn, signUp } = useAuth();
+
+  // Force dark mode on Auth page
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    return () => {
+      document.documentElement.classList.remove('dark');
+    };
+  }, []);
 
   const isSignUp = authMode === 'signup';
   const isOtpRequest = authMode === 'otp-request';
@@ -92,7 +101,6 @@ export default function Auth() {
       if (error) {
         setError(error.message);
       }
-      // If successful, the auth state will update automatically
     } finally {
       setLoading(false);
     }
@@ -146,265 +154,337 @@ export default function Auth() {
 
   const getTitle = () => {
     switch (authMode) {
-      case 'signup': return 'Sign Up';
+      case 'signup': return 'Create Account';
       case 'otp-request': return 'Forgot Password?';
       case 'otp-verify': return 'Enter Code';
-      default: return 'Sign In';
+      default: return 'Sign In or Join Now!';
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (authMode) {
+      case 'signup': return 'Create your asme account';
+      case 'otp-request': return 'We\'ll send you a code to sign in';
+      case 'otp-verify': return 'Enter the code sent to your email';
+      default: return 'login or create your asme account.';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-neutral-900 dark:to-neutral-800 flex items-center justify-center p-4">
-      <div className={`bg-white dark:bg-neutral-800 rounded-2xl shadow-xl p-8 w-full max-w-md transition-all duration-300 ${isSignUp ? 'ring-1 ring-blue-100 dark:ring-neutral-700' : ''}`}>
-        <div className="flex justify-end mb-2">
-          <ThemeToggle />
+    <main className="relative min-h-screen md:overflow-hidden lg:grid lg:grid-cols-2 bg-black">
+      {/* Left Panel - Hidden on mobile, Animated paths */}
+      <div className="bg-muted/60 relative hidden h-screen flex-col border-r border-gray-800 p-10 lg:flex">
+        <div className="from-background absolute inset-0 z-10 bg-gradient-to-t to-transparent" />
+        <div className="z-10 flex items-center gap-2">
+          <Grid2X2 className="size-6 text-white" />
+          <p className="text-xl font-semibold text-white">Productivity Hub</p>
         </div>
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            {isOtpRequest || isOtpVerify ? (
-              <Mail className="w-8 h-8 text-white" />
-            ) : (
-              <LogIn className="w-8 h-8 text-white" />
-            )}
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Productivity Hub</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            {isOtpRequest || isOtpVerify 
-              ? "Sign in with a one-time code" 
-              : "Organize tasks, track habits, manage your day"}
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Productivity hub a elitexsolution&apos;s product.</p>
+        <div className="z-10 mt-auto">
+          <blockquote className="space-y-2">
+            <p className="text-xl text-white">
+              &ldquo;This platform has helped me to save time and organize my tasks better than ever before.&rdquo;
+            </p>
+            <footer className="font-mono text-sm font-semibold text-gray-400">
+              ~ Productivity Hub User
+            </footer>
+          </blockquote>
         </div>
-
-        <div className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          {getTitle()}
+        <div className="absolute inset-0">
+          <FloatingPaths position={1} />
+          <FloatingPaths position={-1} />
         </div>
-
-        {/* OTP Request Form */}
-        {isOtpRequest && (
-          <form onSubmit={handleRequestOtp} className="space-y-4">
-            <div>
-              <label htmlFor="otp-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
-                id="otp-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@example.com"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                We'll send you a 6-digit code to sign in without your password.
-              </p>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-4 py-3 rounded-lg text-sm">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !email}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? 'Sending...' : (
-                <>
-                  <Mail className="w-5 h-5" />
-                  Send Login Code
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={resetToSignIn}
-              className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium py-2"
-            >
-              ← Back to Sign In
-            </button>
-          </form>
-        )}
-
-        {/* OTP Verify Form */}
-        {isOtpVerify && (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div>
-              <label htmlFor="otp-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                6-Digit Code
-              </label>
-              <input
-                id="otp-code"
-                type="text"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                required
-                maxLength={6}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-2xl tracking-widest font-mono"
-                placeholder="000000"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Enter the code sent to <strong>{email}</strong>
-              </p>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-4 py-3 rounded-lg text-sm">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || otpCode.length !== 6}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? 'Verifying...' : (
-                <>
-                  <KeyRound className="w-5 h-5" />
-                  Verify & Sign In
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleResendOtp}
-              disabled={resending}
-              className="w-full border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700 font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {resending ? 'Sending...' : 'Resend Code'}
-            </button>
-
-            <button
-              type="button"
-              onClick={resetToSignIn}
-              className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium py-2"
-            >
-              ← Back to Sign In
-            </button>
-          </form>
-        )}
-
-        {/* Regular Sign In / Sign Up Form */}
-        {!isOtpRequest && !isOtpVerify && (
-          <>
-            <form onSubmit={handleSubmit} className="space-y-4 transition-all duration-300">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="you@example.com"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
-
-              {message && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-4 py-3 rounded-lg text-sm">
-                  {message}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  'Loading...'
-                ) : (
-                  <>
-                    {isSignUp ? <UserPlus className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
-                    {isSignUp ? 'Sign Up' : 'Sign In'}
-                  </>
-                )}
-              </button>
-
-              {isSignUp && (
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resending || !email}
-                  className="w-full border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-neutral-700 font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {resending ? 'Sending...' : 'Resend confirmation email'}
-                </button>
-              )}
-            </form>
-
-            {/* Forgot Password Link - Only show on Sign In */}
-            {!isSignUp && (
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => {
-                    setAuthMode('otp-request');
-                    setError('');
-                    setMessage('');
-                  }}
-                  className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm"
-                >
-                  Forgot password? Sign in with code
-                </button>
-              </div>
-            )}
-
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => {
-                  setAuthMode(isSignUp ? 'signin' : 'signup');
-                  setError('');
-                  setMessage('');
-                }}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-              </button>
-            </div>
-          </>
-        )}
       </div>
-    </div>
+
+      {/* Right Panel - Auth Forms */}
+      <div className="relative flex min-h-screen flex-col bg-black">
+        {/* Home Button */}
+        <div className="p-6">
+          <Button variant="ghost" className="text-white hover:bg-white/10" asChild>
+            <a href="/">
+              <ChevronLeftIcon className="size-4 me-2" />
+              Home
+            </a>
+          </Button>
+        </div>
+
+        {/* Form Content */}
+        <div className="flex-1 flex items-center justify-center px-4 pb-12">
+          <div className="w-full max-w-sm space-y-6">
+            {/* Mobile Logo */}
+            <div className="flex items-center gap-2 lg:hidden justify-center">
+              <Grid2X2 className="size-6 text-white" />
+              <p className="text-xl font-semibold text-white">Productivity Hub</p>
+            </div>
+
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <h1 className="text-2xl font-bold text-white">
+                {getTitle()}
+              </h1>
+              <p className="text-gray-400 text-sm">
+                {getSubtitle()}
+              </p>
+            </div>
+
+            {/* Social Login Buttons - Only show on main sign in/signup */}
+            {!isOtpRequest && !isOtpVerify && (
+              <>
+                <div className="space-y-3">
+                  <Button 
+                    type="button" 
+                    className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                  >
+                    <GoogleIcon className="size-5 me-2" />
+                    Continue with Google
+                  </Button>
+                  <Button 
+                    type="button" 
+                    className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                  >
+                    <AppleIcon className="size-5 me-2" />
+                    Continue with Apple
+                  </Button>
+                  <Button 
+                    type="button" 
+                    className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                  >
+                    <GithubIcon className="size-5 me-2" />
+                    Continue with GitHub
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-700"></div>
+                  <span className="text-gray-500 text-xs uppercase">OR</span>
+                  <div className="flex-1 h-px bg-gray-700"></div>
+                </div>
+              </>
+            )}
+
+            {/* OTP Request Form */}
+            {isOtpRequest && (
+              <form onSubmit={handleRequestOtp} className="space-y-4">
+                <p className="text-gray-400 text-sm">
+                  Enter your email address to receive a sign-in code
+                </p>
+                <div className="relative">
+                  <Input
+                    placeholder="your.email@example.com"
+                    className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12 pl-10"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <AtSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-500" />
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {message && (
+                  <div className="bg-blue-500/10 border border-blue-500/50 text-blue-400 px-4 py-3 rounded-lg text-sm">
+                    {message}
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                  disabled={loading || !email}
+                >
+                  {loading ? 'Sending...' : 'Send Login Code'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={resetToSignIn}
+                  className="w-full text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <ChevronLeftIcon className="size-4 me-2" />
+                  Back to Sign In
+                </Button>
+              </form>
+            )}
+
+            {/* OTP Verify Form */}
+            {isOtpVerify && (
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <Input
+                  type="text"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  maxLength={6}
+                  className="w-full bg-gray-900 border-gray-700 text-white text-center text-2xl tracking-widest font-mono h-14"
+                  placeholder="000000"
+                />
+                <p className="text-xs text-gray-500 text-center">
+                  Enter the code sent to <strong className="text-white">{email}</strong>
+                </p>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {message && (
+                  <div className="bg-blue-500/10 border border-blue-500/50 text-blue-400 px-4 py-3 rounded-lg text-sm">
+                    {message}
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                  disabled={loading || otpCode.length !== 6}
+                >
+                  {loading ? 'Verifying...' : 'Verify & Sign In'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleResendOtp}
+                  disabled={resending}
+                  className="w-full text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  {resending ? 'Sending...' : 'Resend Code'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={resetToSignIn}
+                  className="w-full text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <ChevronLeftIcon className="size-4 me-2" />
+                  Back to Sign In
+                </Button>
+              </form>
+            )}
+
+            {/* Regular Sign In / Sign Up Form */}
+            {!isOtpRequest && !isOtpVerify && (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <p className="text-gray-400 text-sm">
+                  Enter your email address to sign in or create an account
+                </p>
+                
+                <div className="relative">
+                  <Input
+                    placeholder="your.email@example.com"
+                    className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12 pl-10"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <AtSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-500" />
+                </div>
+
+                {!isSignUp && (
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 h-12"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                )}
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {message && (
+                  <div className="bg-blue-500/10 border border-blue-500/50 text-blue-400 px-4 py-3 rounded-lg text-sm">
+                    {message}
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Continue With Email')}
+                </Button>
+
+                {isSignUp && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleResend}
+                    disabled={resending || !email}
+                    className="w-full text-gray-400 hover:text-white hover:bg-white/10"
+                  >
+                    {resending ? 'Sending...' : 'Resend confirmation email'}
+                  </Button>
+                )}
+
+                {/* Forgot Password Link - Only show on Sign In */}
+                {!isSignUp && (
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('otp-request');
+                        setError('');
+                        setMessage('');
+                      }}
+                      className="text-gray-400 hover:text-white text-sm"
+                    >
+                      Forgot password? Sign in with code
+                    </button>
+                  </div>
+                )}
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode(isSignUp ? 'signin' : 'signup');
+                      setError('');
+                      setMessage('');
+                    }}
+                    className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                  >
+                    {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Terms and Privacy */}
+            <p className="text-gray-500 text-xs text-center">
+              By clicking continue, you agree to our{' '}
+              <a
+                href="/terms-of-service"
+                className="text-gray-400 hover:text-white underline underline-offset-2"
+              >
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a
+                href="/privacy-policy"
+                className="text-gray-400 hover:text-white underline underline-offset-2"
+              >
+                Privacy Policy
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
