@@ -30,10 +30,11 @@ export function RequestFeatureForm({ className, variant = 'default' }: RequestFe
                 },
                 body: JSON.stringify({
                     _subject: `New Feature Request: ${title}`,
+                    _captcha: "false", // Disable captcha for AJAX
+                    _template: "table",
                     title,
                     description,
                     user_email: user?.email || 'Anonymous',
-                    _template: 'table'
                 })
             });
 
