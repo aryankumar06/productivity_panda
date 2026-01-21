@@ -571,6 +571,22 @@ export default function Auth() {
                   </div>
                 )}
 
+                <div className="flex justify-between items-center mb-4">
+                  {!isSignUp && (
+                     <button
+                        type="button"
+                        onClick={() => {
+                           setEmail('demo@productivityhub.com');
+                           setPassword('demo123456');
+                        }}
+                        className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                     >
+                        <KeyRound className="size-3" />
+                        Use demo credentials
+                     </button>
+                  )}
+                </div>
+
                 <Button 
                   type="submit" 
                   className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
