@@ -33,7 +33,20 @@ import {
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { Slider } from './ui/slider';
-import { TaskStatus, WorkspaceRole } from '../lib/database.types';
+import { TaskStatus, WorkspaceRole, Task } from '../lib/database.types';
+import { 
+    DndContext, 
+    DragOverlay, 
+    useSensor, 
+    useSensors, 
+    PointerSensor,
+    TouchSensor,
+    DragEndEvent,
+    DragStartEvent
+} from '@dnd-kit/core';
+import { DroppableColumn } from './DroppableColumn';
+import { DraggableTaskCard } from './DraggableTaskCard';
+import { ProjectProgress } from './ProjectProgress';
 
 // =============================================================================
 // TYPES
@@ -58,18 +71,7 @@ interface WorkspaceMember {
     display_name?: string;
 }
 
-interface WorkspaceTask {
-    id: string;
-    workspace_id: string;
-    title: string;
-    description: string | null;
-    status: TaskStatus;
-    priority: string;
-    assignee_id: string | null;
-    created_by: string;
-    due_date: string | null;
-    created_at: string;
-}
+// Removed WorkspaceTask local interface in favor of imported Task type
 
 // =============================================================================
 // COMPONENT
@@ -80,8 +82,9 @@ export default function WorkspaceView() {
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
     const [members, setMembers] = useState<WorkspaceMember[]>([]);
-    const [tasks, setTasks] = useState<WorkspaceTask[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
     
     // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -422,13 +425,75 @@ export default function WorkspaceView() {
     const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
     
     // Filter tasks for employees - they only see assigned tasks
-    const visibleTasks = isEmployee && !isManager
-        ? tasks.filter(t => t.assignee_id === user?.id)
-        : tasks;
 
-    const getTasksByStatus = (status: TaskStatus) => visibleTasks.filter(t => t.status === status);
+     // Drag and Drop Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
+            },
+        })
+    );
 
-    const getMemberName = (userId: string | null) => {
+    const handleDragStart = (event: DragStartEvent) => {
+        const { active } = event;
+        const task = tasks.find(t => t.id === active.id);
+        if (task) {
+            setActiveDragTask(task);
+        }
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveDragTask(null);
+
+        if (!over) return;
+
+        const taskId = active.id as string;
+        const newStatus = over.id as TaskStatus;
+        const task = tasks.find(t => t.id === taskId);
+
+        if (!task || task.status === newStatus) return;
+
+        // Check permissions
+        if (!canTransitionState(role || 'employee', task.status, newStatus)) {
+            // Optional: Show a toast error here
+            console.warn('Unauthorized transition');
+            return;
+        }
+
+        // Optimistic update
+        const previousTasks = [...tasks];
+        setTasks(tasks.map(t => 
+            t.id === taskId ? { ...t, status: newStatus } : t
+        ));
+
+        // Persist to DB
+        const { error } = await supabase
+            .from('workspace_tasks')
+            .update({ status: newStatus })
+            .eq('id', taskId);
+
+        if (error) {
+            console.error('Failed to update task status:', error);
+            // Revert on error
+            setTasks(previousTasks);
+        }
+    };
+
+    // Derived states
+ 
+
+    // Helper to get tasks by status
+    const getTasksByStatus = (status: TaskStatus) => {
+        return tasks.filter(task => task.status === status);
+    };  const getMemberName = (userId: string | null) => {
         if (!userId) return 'Unassigned';
         const member = members.find(m => m.user_id === userId);
         return member?.display_name || member?.email || userId.slice(0, 8);
@@ -610,54 +675,90 @@ export default function WorkspaceView() {
                         </div>
 
                         {/* Kanban Board with Custom Slider */}
-                        <div className="flex-1 flex flex-col bg-gray-50/30 dark:bg-neutral-900/30 overflow-hidden">
-                            {/* Kanban Columns */}
-                            <div 
-                                ref={kanbanRef}
-                                className="flex-1 overflow-x-auto scrollbar-hide scroll-smooth"
-                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                                onScroll={(e) => {
-                                    const target = e.currentTarget;
-                                    requestAnimationFrame(() => {
-                                        const scrollPercentage = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100 || 0;
-                                        setScrollPosition(scrollPercentage);
-                                    });
-                                }}
+                        <div className="flex-1 flex flex-col bg-gray-50/30 dark:bg-neutral-900/30 overflow-hidden relative">
+                            {/* Header Stats */}
+                            <div className="px-6 py-2 border-b border-gray-100 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm z-10">
+                                <ProjectProgress tasks={tasks} />
+                            </div>
+
+                            <DndContext 
+                                sensors={sensors} 
+                                onDragStart={handleDragStart} 
+                                onDragEnd={handleDragEnd}
                             >
-                                <div className="flex gap-4 p-4 h-full" style={{ minWidth: 'max-content' }}>
-                                    {TASK_STATUSES.map(status => (
-                                        <div key={status.id} className="flex flex-col w-[260px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-3">
-                                            <div className="flex items-center justify-between mb-3 px-1">
-                                                <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
-                                                    <span className={`w-2 h-2 rounded-full ${
-                                                        status.id === 'done' ? 'bg-green-500' : 
-                                                        status.id === 'review' ? 'bg-purple-500' :
-                                                        status.id === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
-                                                    }`} />
-                                                    {status.label}
-                                                </h3>
-                                                <span className="text-xs text-gray-400 font-mono bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded">
-                                                    {getTasksByStatus(status.id).length}
-                                                </span>
-                                            </div>
-                                            
-                                            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[100px]">
-                                                {getTasksByStatus(status.id).map(task => (
-                                                    <TaskCard
-                                                        key={task.id}
-                                                        task={task}
-                                                        role={role}
-                                                        isManager={isManager}
+                                {/* Kanban Columns */}
+                                <div 
+                                    ref={kanbanRef}
+                                    className="flex-1 overflow-x-auto scrollbar-hide scroll-smooth"
+                                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                    onScroll={(e) => {
+                                        const target = e.currentTarget;
+                                        requestAnimationFrame(() => {
+                                            const scrollPercentage = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100 || 0;
+                                            setScrollPosition(scrollPercentage);
+                                        });
+                                    }}
+                                >
+                                    <div className="flex gap-4 p-4 h-full" style={{ minWidth: 'max-content' }}>
+                                        {TASK_STATUSES.map(status => (
+                                            <DroppableColumn 
+                                                key={status.id} 
+                                                id={status.id}
+                                                className="flex flex-col w-[280px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-3 ring-offset-2 dark:ring-offset-neutral-950"
+                                            >
+                                                <div className="flex items-center justify-between mb-3 px-1">
+                                                    <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
+                                                        <span className={`w-2 h-2 rounded-full ${
+                                                            status.id === 'done' ? 'bg-green-500' : 
+                                                            status.id === 'review' ? 'bg-purple-500' :
+                                                            status.id === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
+                                                        }`} />
+                                                        {status.label}
+                                                    </h3>
+                                                    <span className="text-xs text-gray-400 font-mono bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded">
+                                                        {getTasksByStatus(status.id).length}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[100px] scrollbar-thin">
+                                                    {getTasksByStatus(status.id).map(task => (
+                                                        <DraggableTaskCard
+                                                            key={task.id}
+                                                            id={task.id}
+                                                            disabled={!canTransitionState(role || 'employee', task.status, status.id)} // Basic check for start drag
+                                                        >
+                                                            <TaskCard
+                                                                task={task}
+                                                                role={role}
+                                                                isManager={isManager}
                                                         getMemberName={getMemberName}
                                                         onUpdateStatus={handleUpdateTaskStatus}
                                                         onDelete={handleDeleteTask}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
+                                                            />
+                                                        </DraggableTaskCard>
+                                                    ))}
+                                                </div>
+                                            </DroppableColumn>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                                
+                                <DragOverlay>
+                                    {activeDragTask ? (
+                                        <div className="transform rotate-3 scale-105 opacity-90 cursor-grabbing">
+                                            <TaskCard
+                                                task={activeDragTask}
+                                                role={role}
+                                                isManager={isManager}
+                                                onUpdateStatus={() => Promise.resolve()} 
+                                                onDelete={() => {}}
+                                                getMemberName={getMemberName}
+                                                // Disable interactions while dragging
+                                            />
+                                        </div>
+                                    ) : null}
+                                </DragOverlay>
+                            </DndContext>
                             
                             {/* Custom Slider */}
                             <div className="px-4 py-3 border-t border-gray-200/50 dark:border-neutral-800/50">
@@ -848,7 +949,7 @@ function Modal({ onClose, title, children }: ModalProps) {
 }
 
 interface TaskCardProps {
-    task: WorkspaceTask;
+    task: Task;
     role: WorkspaceRole | null;
     isManager: boolean;
     getMemberName: (userId: string | null) => string;

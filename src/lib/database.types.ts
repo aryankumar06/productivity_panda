@@ -12,6 +12,7 @@ export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type NotificationType = 'alert' | 'invite' | 'mention' | 'update' | 'info';
 export type InviteStatus = 'pending' | 'accepted' | 'rejected';
+export type Task = Database['public']['Tables']['workspace_tasks']['Row'];
 
 export interface Database {
   public: {
