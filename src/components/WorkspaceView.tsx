@@ -430,7 +430,7 @@ export default function WorkspaceView() {
     // =========================================================================
 
     return (
-        <div className="h-[calc(100vh-180px)] flex flex-col md:flex-row gap-6 animate-in fade-in">
+        <div className="min-h-[400px] md:h-[calc(100vh-180px)] flex flex-col md:flex-row gap-4 md:gap-6 animate-in fade-in">
             {/* Sidebar: Workspace List */}
             <div className="w-full md:w-64 flex-shrink-0 space-y-4">
                 <div className="flex items-center justify-between mb-4">
@@ -445,7 +445,7 @@ export default function WorkspaceView() {
                     </Button>
                 </div>
 
-                <ScrollArea className="h-[calc(100vh-320px)]">
+                <ScrollArea className="h-auto max-h-[200px] md:h-[calc(100vh-320px)]">
                     <div className="space-y-2 pr-2">
                         {loading ? (
                             <div className="text-center py-8 text-gray-400">Loading...</div>
@@ -489,11 +489,11 @@ export default function WorkspaceView() {
                 {activeWorkspace && isMember ? (
                     <>
                         {/* Header */}
-                        <div className="p-4 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between bg-gray-50/50 dark:bg-neutral-800/50">
+                        <div className="p-3 md:p-4 border-b border-gray-200 dark:border-neutral-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gray-50/50 dark:bg-neutral-800/50">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Layout className="w-5 h-5 text-gray-500" />
-                                    {activeWorkspace.name}
+                                <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Layout className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
+                                    <span className="truncate">{activeWorkspace.name}</span>
                                 </h2>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -508,15 +508,15 @@ export default function WorkspaceView() {
                                     </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 w-full md:w-auto">
                                 {canInviteUsers && (
                                     <Button 
                                         size="sm"
                                         onClick={() => setShowInviteModal(true)}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 flex-1 md:flex-none text-xs md:text-sm"
                                     >
-                                        <UserPlus className="w-4 h-4" />
-                                        Invite
+                                        <UserPlus className="w-3 h-3 md:w-4 md:h-4" />
+                                        <span className="md:inline">Invite</span>
                                     </Button>
                                 )}
                                 {canCreateTasks && (
@@ -524,10 +524,10 @@ export default function WorkspaceView() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() => setShowTaskModal(true)}
-                                        className="gap-2"
+                                        className="gap-2 flex-1 md:flex-none text-xs md:text-sm"
                                     >
-                                        <Plus className="w-4 h-4" />
-                                        Add Task
+                                        <Plus className="w-3 h-3 md:w-4 md:h-4" />
+                                        <span className="md:inline">Task</span>
                                     </Button>
                                 )}
                             </div>
@@ -560,17 +560,17 @@ export default function WorkspaceView() {
 
                         {/* Kanban Board */}
                         <div className="flex-1 bg-gray-50/30 dark:bg-neutral-900/30 overflow-x-auto">
-                            <div className="flex gap-4 p-4 h-full" style={{ minWidth: 'max-content' }}>
+                            <div className="flex gap-3 md:gap-4 p-3 md:p-4 h-full" style={{ minWidth: 'max-content' }}>
                                 {TASK_STATUSES.map(status => (
-                                    <div key={status.id} className="flex flex-col w-[260px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-3">
-                                        <div className="flex items-center justify-between mb-3 px-1">
-                                            <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
+                                    <div key={status.id} className="flex flex-col w-[220px] md:w-[260px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-2 md:p-3">
+                                        <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
+                                            <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm flex items-center gap-2">
                                                 <span className={`w-2 h-2 rounded-full ${
                                                     status.id === 'done' ? 'bg-green-500' : 
                                                     status.id === 'review' ? 'bg-purple-500' :
                                                     status.id === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
                                                 }`} />
-                                                {status.label}
+                                                <span className="truncate">{status.label}</span>
                                             </h3>
                                             <span className="text-xs text-gray-400 font-mono bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded">
                                                 {getTasksByStatus(status.id).length}
@@ -749,15 +749,15 @@ interface ModalProps {
 
 function Modal({ onClose, title, children }: ModalProps) {
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800">
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
-                    <h3 className="text-lg font-bold dark:text-white">{title}</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4">
+            <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-3 md:p-4 border-b border-gray-200 dark:border-neutral-800 sticky top-0 bg-white dark:bg-neutral-900 z-10">
+                    <h3 className="text-base md:text-lg font-bold dark:text-white">{title}</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <div className="p-4">
+                <div className="p-3 md:p-4">
                     {children}
                 </div>
             </div>
@@ -787,15 +787,15 @@ function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDele
     };
 
     return (
-        <div className="bg-white dark:bg-neutral-900 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-700 group hover:border-blue-400 transition-colors">
+        <div className="bg-white dark:bg-neutral-900 p-2 md:p-3 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-700 group hover:border-blue-400 transition-colors">
             <div className="flex items-start justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1">{task.title}</h4>
+                <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 line-clamp-2">{task.title}</h4>
                 {isManager && (
                     <button 
                         onClick={() => onDelete(task.id)}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-gray-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 p-1"
                     >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                     </button>
                 )}
             </div>
@@ -814,7 +814,7 @@ function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDele
                     <div className="relative">
                         <button
                             onClick={() => setShowStatusMenu(!showStatusMenu)}
-                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 py-1"
                         >
                             Move to...
                             <ChevronRight className={`w-3 h-3 transition-transform ${showStatusMenu ? 'rotate-90' : ''}`} />
