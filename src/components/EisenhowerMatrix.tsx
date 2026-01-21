@@ -7,7 +7,8 @@ import {
   PointerSensor, 
   useSensor, 
   useSensors,
-  DragEndEvent
+  DragEndEvent,
+  useDroppable
 } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useAuth } from '../contexts/AuthContext';
@@ -145,50 +146,7 @@ export default function EisenhowerMatrix() {
     const quadrantTasks = tasks.filter(t => getEisenhowerQuadrant(t) === id);
 
     return (
-      <div 
-        key={id}
-        id={id} // This is the drop target
-        className={`flex flex-col h-full rounded-2xl border-2 p-4 ${COLORS[id]} transition-colors group/container`}
-      >
-        <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
-            {title}
-            <div className="flex items-center gap-2">
-                <span className="bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded text-sm">{quadrantTasks.length}</span>
-                <button 
-                    onClick={() => { setAddingToQuadrant(id); setTimeout(() => document.getElementById(`input-${id}`)?.focus(), 50); }}
-                    className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
-            </div>
-        </h3>
-        <div className="flex-1 space-y-3">
-             {/* Inline Add Form */}
-             {addingToQuadrant === id && (
-                 <form onSubmit={handleAddTask} className="mb-3 animate-in fade-in zoom-in-95 duration-200">
-                     <input 
-                        id={`input-${id}`}
-                        type="text" 
-                        placeholder="Add task..." 
-                        className="w-full px-3 py-2 rounded-xl border border-blue-400 focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:bg-neutral-800 dark:text-white"
-                        value={newTaskTitle}
-                        onChange={e => setNewTaskTitle(e.target.value)}
-                        onBlur={() => !newTaskTitle && setAddingToQuadrant(null)}
-                         autoFocus
-                     />
-                 </form>
-             )}
-
-             {quadrantTasks.map(task => (
-                 <DraggableTask key={task.id} task={task} />
-             ))}
-             {quadrantTasks.length === 0 && !addingToQuadrant && (
-                 <div className="h-20 border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-xl flex items-center justify-center text-sm text-gray-400">
-                    Drop task or click +
-                 </div>
-             )}
-        </div>
-      </div>
+      <DroppableQuadrant key={id} id={id} title={title} tasks={quadrantTasks} addingToQuadrant={addingToQuadrant} setAddingToQuadrant={setAddingToQuadrant} newTaskTitle={newTaskTitle} setNewTaskTitle={setNewTaskTitle} handleAddTask={handleAddTask} />
     );
   };
 
@@ -245,3 +203,65 @@ function DraggableTask({ task }: { task: Task }) {
     </div>
   );
 }
+
+function DroppableQuadrant({ id, title, tasks, addingToQuadrant, setAddingToQuadrant, newTaskTitle, setNewTaskTitle, handleAddTask }: { 
+  id: Quadrant; 
+  title: string; 
+  tasks: Task[]; 
+  addingToQuadrant: Quadrant | null;
+  setAddingToQuadrant: (q: Quadrant | null) => void;
+  newTaskTitle: string;
+  setNewTaskTitle: (s: string) => void;
+  handleAddTask: (e: React.FormEvent) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: id,
+  });
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`flex flex-col h-full rounded-2xl border-2 p-4 ${COLORS[id as keyof typeof COLORS]} transition-colors group/container ${isOver ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+    >
+      <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
+          {title}
+          <div className="flex items-center gap-2">
+              <span className="bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded text-sm">{tasks.length}</span>
+              <button 
+                  onClick={() => { setAddingToQuadrant(id); setTimeout(() => document.getElementById(`input-${id}`)?.focus(), 50); }}
+                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+              >
+                  <Plus className="w-4 h-4" />
+              </button>
+          </div>
+      </h3>
+      <div className="flex-1 space-y-3">
+           {/* Inline Add Form */}
+           {addingToQuadrant === id && (
+               <form onSubmit={handleAddTask} className="mb-3 animate-in fade-in zoom-in-95 duration-200">
+                   <input 
+                      id={`input-${id}`}
+                      type="text" 
+                      placeholder="Add task..." 
+                      className="w-full px-3 py-2 rounded-xl border border-blue-400 focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:bg-neutral-800 dark:text-white"
+                      value={newTaskTitle}
+                      onChange={e => setNewTaskTitle(e.target.value)}
+                      onBlur={() => !newTaskTitle && setAddingToQuadrant(null)}
+                       autoFocus
+                   />
+               </form>
+           )}
+
+           {tasks.map((task: Task) => (
+               <DraggableTask key={task.id} task={task} />
+           ))}
+           {tasks.length === 0 && !addingToQuadrant && (
+               <div className="h-20 border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-xl flex items-center justify-center text-sm text-gray-400">
+                  Drop task or click +
+               </div>
+           )}
+      </div>
+    </div>
+  );
+}
+

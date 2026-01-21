@@ -7,7 +7,7 @@
  * - Real-time updates via Supabase
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
     Plus, 
     FolderPlus, 
@@ -32,6 +32,7 @@ import {
 } from '../lib/permissions';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
+import { Slider } from './ui/slider';
 import { TaskStatus, WorkspaceRole } from '../lib/database.types';
 
 // =============================================================================
@@ -95,6 +96,14 @@ export default function WorkspaceView() {
     const [newTaskPriority, setNewTaskPriority] = useState('medium');
     const [newTaskAssignee, setNewTaskAssignee] = useState<string | null>(null);
     const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>('todo');
+    
+    // Kanban scroll
+    const kanbanRef = useRef<HTMLDivElement>(null);
+    const [scrollPosition, setScrollPosition] = useState(0);
+
+    // Members scroll
+    const membersRef = useRef<HTMLDivElement>(null);
+    const [membersScrollPosition, setMembersScrollPosition] = useState(0);
     
     // Permissions
     const { 
@@ -431,8 +440,8 @@ export default function WorkspaceView() {
 
     return (
         <div className="h-[calc(100vh-180px)] flex flex-col md:flex-row gap-6 animate-in fade-in">
-            {/* Sidebar: Workspace List */}
-            <div className="w-full md:w-64 flex-shrink-0 space-y-4">
+            {/* Sidebar: Workspace List - Hidden on mobile when workspace is selected */}
+            <div className={`w-full md:w-64 flex-shrink-0 space-y-4 ${activeWorkspaceId ? 'hidden md:block' : 'block'}`}>
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-bold dark:text-white">Workspaces</h2>
                     <Button 
@@ -484,17 +493,26 @@ export default function WorkspaceView() {
                 </ScrollArea>
             </div>
 
-            {/* Main Area */}
-            <div className="flex-1 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 overflow-hidden flex flex-col shadow-sm">
+            {/* Main Area - Show on mobile when workspace is selected */}
+            <div className={`flex-1 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 overflow-hidden flex flex-col shadow-sm ${activeWorkspaceId ? 'block' : 'hidden md:block'}`}>
                 {activeWorkspace && isMember ? (
                     <>
                         {/* Header */}
                         <div className="p-4 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between bg-gray-50/50 dark:bg-neutral-800/50">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Layout className="w-5 h-5 text-gray-500" />
-                                    {activeWorkspace.name}
-                                </h2>
+                            <div className="flex items-center gap-2">
+                                {/* Back button for mobile */}
+                                <button
+                                    onClick={() => setActiveWorkspaceId(null)}
+                                    className="md:hidden p-2 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+                                    title="Back to workspaces"
+                                >
+                                    <ChevronRight className="w-5 h-5 rotate-180" />
+                                </button>
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Layout className="w-5 h-5 text-gray-500" />
+                                        {activeWorkspace.name}
+                                    </h2>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                         isManager 
@@ -507,6 +525,7 @@ export default function WorkspaceView() {
                                         {members.length} member{members.length !== 1 ? 's' : ''}
                                     </span>
                                 </div>
+                            </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 {canInviteUsers && (
@@ -533,65 +552,128 @@ export default function WorkspaceView() {
                             </div>
                         </div>
 
-                        {/* Members Bar */}
-                        <div className="px-4 py-2 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2 overflow-x-auto">
-                            <span className="text-xs text-gray-500 mr-2 flex-shrink-0">Team:</span>
-                            {members.map(m => (
-                                <div 
-                                    key={m.id}
-                                    className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-neutral-800 rounded-full text-xs flex-shrink-0"
-                                    title={m.email}
-                                >
-                                    <span className={`w-2 h-2 rounded-full ${m.role === 'manager' ? 'bg-purple-500' : 'bg-gray-400'}`} />
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">
-                                        {m.display_name || m.email?.split('@')[0] || 'User'}
-                                    </span>
-                                    {canManageMembers && m.user_id !== user?.id && (
-                                        <button 
-                                            onClick={() => handleRemoveMember(m.id, m.user_id)}
-                                            className="ml-1 text-gray-400 hover:text-red-500"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Kanban Board */}
-                        <div className="flex-1 bg-gray-50/30 dark:bg-neutral-900/30 overflow-x-auto">
-                            <div className="flex gap-4 p-4 h-full" style={{ minWidth: 'max-content' }}>
-                                {TASK_STATUSES.map(status => (
-                                    <div key={status.id} className="flex flex-col w-[260px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-3">
-                                        <div className="flex items-center justify-between mb-3 px-1">
-                                            <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
-                                                <span className={`w-2 h-2 rounded-full ${
-                                                    status.id === 'done' ? 'bg-green-500' : 
-                                                    status.id === 'review' ? 'bg-purple-500' :
-                                                    status.id === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
-                                                }`} />
-                                                {status.label}
-                                            </h3>
-                                            <span className="text-xs text-gray-400 font-mono bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded">
-                                                {getTasksByStatus(status.id).length}
-                                            </span>
-                                        </div>
-                                        
-                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[100px]">
-                                            {getTasksByStatus(status.id).map(task => (
-                                                <TaskCard
-                                                    key={task.id}
-                                                    task={task}
-                                                    role={role}
-                                                    isManager={isManager}
-                                                    getMemberName={getMemberName}
-                                                    onUpdateStatus={handleUpdateTaskStatus}
-                                                    onDelete={handleDeleteTask}
-                                                />
-                                            ))}
-                                        </div>
+                        {/* Members Bar with Custom Slider */}
+                        <div className="border-b border-gray-100 dark:border-neutral-800">
+                            <div 
+                                ref={membersRef}
+                                className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth"
+                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                onScroll={(e) => {
+                                    const target = e.currentTarget;
+                                    requestAnimationFrame(() => {
+                                        const scrollPercentage = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100 || 0;
+                                        setMembersScrollPosition(scrollPercentage);
+                                    });
+                                }}
+                            >
+                                <span className="text-xs text-gray-500 mr-2 flex-shrink-0">Team:</span>
+                                {members.map(m => (
+                                    <div 
+                                        key={m.id}
+                                        className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-neutral-800 rounded-full text-xs flex-shrink-0"
+                                        title={m.email}
+                                    >
+                                        <span className={`w-2 h-2 rounded-full ${m.role === 'manager' ? 'bg-purple-500' : 'bg-gray-400'}`} />
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                                            {m.display_name || m.email?.split('@')[0] || 'User'}
+                                        </span>
+                                        {canManageMembers && m.user_id !== user?.id && (
+                                            <button 
+                                                onClick={() => handleRemoveMember(m.id, m.user_id)}
+                                                className="ml-1 text-gray-400 hover:text-red-500"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
+                            </div>
+                            
+                            {/* Member Slider (visible if overflow) */}
+                            {members.length > 3 && (
+                                <div className="px-10 pb-2">
+                                    <Slider
+                                        value={[membersScrollPosition]}
+                                        max={100}
+                                        step={1}
+                                        onValueChange={(value) => {
+                                            if (membersRef.current) {
+                                                const scrollWidth = membersRef.current.scrollWidth - membersRef.current.clientWidth;
+                                                membersRef.current.scrollLeft = (value[0] / 100) * scrollWidth;
+                                                setMembersScrollPosition(value[0]);
+                                            }
+                                        }}
+                                        className="w-full h-1"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Kanban Board with Custom Slider */}
+                        <div className="flex-1 flex flex-col bg-gray-50/30 dark:bg-neutral-900/30 overflow-hidden">
+                            {/* Kanban Columns */}
+                            <div 
+                                ref={kanbanRef}
+                                className="flex-1 overflow-x-auto scrollbar-hide scroll-smooth"
+                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                onScroll={(e) => {
+                                    const target = e.currentTarget;
+                                    requestAnimationFrame(() => {
+                                        const scrollPercentage = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100 || 0;
+                                        setScrollPosition(scrollPercentage);
+                                    });
+                                }}
+                            >
+                                <div className="flex gap-4 p-4 h-full" style={{ minWidth: 'max-content' }}>
+                                    {TASK_STATUSES.map(status => (
+                                        <div key={status.id} className="flex flex-col w-[260px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-3">
+                                            <div className="flex items-center justify-between mb-3 px-1">
+                                                <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
+                                                    <span className={`w-2 h-2 rounded-full ${
+                                                        status.id === 'done' ? 'bg-green-500' : 
+                                                        status.id === 'review' ? 'bg-purple-500' :
+                                                        status.id === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
+                                                    }`} />
+                                                    {status.label}
+                                                </h3>
+                                                <span className="text-xs text-gray-400 font-mono bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded">
+                                                    {getTasksByStatus(status.id).length}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[100px]">
+                                                {getTasksByStatus(status.id).map(task => (
+                                                    <TaskCard
+                                                        key={task.id}
+                                                        task={task}
+                                                        role={role}
+                                                        isManager={isManager}
+                                                        getMemberName={getMemberName}
+                                                        onUpdateStatus={handleUpdateTaskStatus}
+                                                        onDelete={handleDeleteTask}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Custom Slider */}
+                            <div className="px-4 py-3 border-t border-gray-200/50 dark:border-neutral-800/50">
+                                <Slider
+                                    value={[scrollPosition]}
+                                    max={100}
+                                    step={1}
+                                    onValueChange={(value) => {
+                                        if (kanbanRef.current) {
+                                            const scrollWidth = kanbanRef.current.scrollWidth - kanbanRef.current.clientWidth;
+                                            kanbanRef.current.scrollLeft = (value[0] / 100) * scrollWidth;
+                                            setScrollPosition(value[0]);
+                                        }
+                                    }}
+                                    className="w-full"
+                                />
                             </div>
                         </div>
                     </>

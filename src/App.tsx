@@ -5,6 +5,7 @@ import TermsOfService from './components/TermsOfService';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import { CommandPalette } from './components/CommandPalette';
 import LandingPage from './components/LandingPage';
+import { CustomCursor } from './components/ui/custom-cursor';
 
 function App() {
   const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ function App() {
   if (user) {
     return (
     <>
+      <CustomCursor />
       {user && <CommandPalette />}
       {user ? <Dashboard /> : <Auth />}
     </>
@@ -39,10 +41,20 @@ function App() {
 }
 
   if (path === '/login' || path === '/signup') {
-    return <Auth />;
+    return (
+      <>
+        <CustomCursor />
+        <Auth />
+      </>
+    );
   }
 
-  return <LandingPage />;
+  return (
+    <>
+      <CustomCursor />
+      <LandingPage />
+    </>
+  );
 }
 
 export default App;
