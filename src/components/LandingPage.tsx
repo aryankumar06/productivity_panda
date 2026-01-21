@@ -1,9 +1,12 @@
 import { BackgroundPaths } from "@/components/ui/background-paths";
-import { CheckCircle, Zap, TrendingUp, Shield } from "lucide-react";
+import { CheckCircle, Zap, TrendingUp, Shield, Moon, Sun } from "lucide-react";
+import { Button } from "./ui/button";
+import { useTheme } from "../contexts/ThemeContext";
 import { motion } from "framer-motion";
 import { RequestFeatureForm } from "./RequestFeatureForm";
 
 function LandingPage() {
+    const { theme, toggleTheme } = useTheme();
     const features = [
         {
             icon: <CheckCircle className="w-8 h-8 text-blue-500" />,
@@ -31,6 +34,17 @@ function LandingPage() {
         <div className="bg-neutral-50 dark:bg-neutral-950 min-h-screen relative">
             <div className="absolute top-0 right-0 p-6 z-20">
                 <RequestFeatureForm variant="outline" className="bg-white/50 dark:bg-black/50 backdrop-blur-sm border-neutral-200 dark:border-neutral-800 hover:bg-white dark:hover:bg-neutral-900" />
+            </div>
+
+            <div className="absolute top-0 left-0 p-6 z-20">
+                <Button 
+                    variant="outline"
+                    className="bg-white/50 dark:bg-black/50 backdrop-blur-sm border-neutral-200 dark:border-neutral-800 hover:bg-white dark:hover:bg-neutral-900"
+                    onClick={toggleTheme}
+                >
+                    {theme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                </Button>
             </div>
             
             <BackgroundPaths 
@@ -92,7 +106,7 @@ function LandingPage() {
                         </div>
                         <div className="md:text-right">
                             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
-                                Developer Details
+                                Meet the developer -
                             </h3>
                             <p className="text-sm text-neutral-600 dark:text-neutral-300 font-medium mb-1">
                                 Aryan Kumar
@@ -104,7 +118,7 @@ function LandingPage() {
                                 <a href="https://www.producthunt.com/posts/productivity-hub" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Product Hunt</a>
                             </div>
                             <div className="text-sm text-neutral-500 dark:text-neutral-400 space-y-1">
-                                <p>Contact: <a href="tel:9310479532" className="hover:text-neutral-900 dark:hover:text-white transition-colors">9310479532</a></p>
+                                <p>Contact: <a href="tel:9310479532" className="hover:text-neutral-900 dark:hover:text-white transition-colors">+91 9310479532</a></p>
                                 <p>Email: <a href="mailto:team@elitexsolutions.xyz" className="hover:text-neutral-900 dark:hover:text-white transition-colors">team@elitexsolutions.xyz</a></p>
                             </div>
                         </div>
