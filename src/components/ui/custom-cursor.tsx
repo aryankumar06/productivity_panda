@@ -16,9 +16,9 @@ export function CustomCursor() {
   const cursorX = useSpring(mouseX, springConfig)
   const cursorY = useSpring(mouseY, springConfig)
 
-  // Inject styles to hide default cursor
+  // Inject styles to hide default cursor ONLY on devices with a mouse
   useEffect(() => {
-    // Only apply on non-touch devices
+    // Only apply on non-touch devices with hover capability
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
     if (isTouchDevice) return
 
@@ -49,7 +49,7 @@ export function CustomCursor() {
 
     const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      // More aggressive clickable detection
+      // Comprehensive clickable detection
       const isClickable = 
         target.tagName.toLowerCase() === 'button' ||
         target.tagName.toLowerCase() === 'a' ||
@@ -114,7 +114,6 @@ export function CustomCursor() {
       {/* 
         OUTER RING:
         Reacts to hover.
-        Also uses mix-blend-mode: difference for perfect contrast.
       */}
       <motion.div
         className="fixed top-0 left-0 rounded-full pointer-events-none z-[9998] mix-blend-difference"
@@ -123,17 +122,12 @@ export function CustomCursor() {
           y: cursorY,
           translateX: "-50%",
           translateY: "-50%",
-          backgroundColor: "white", // Solid white for difference math
+          backgroundColor: "white", 
         }}
         animate={{
           width: isHovering ? 60 : 20,
           height: isHovering ? 60 : 20,
-          opacity: isHovering ? 1 : 0.3, // Solid when hovering, transparent ring when not
-          // When hovering: it becomes a solid inverted circle
-          // When not hovering: we want it to look like a ring. 
-          // Since we can't easily animate border-width with mix-blend-mode nicely, 
-          // we use the 'mask' trick or just simple opacity/scale. 
-          // Let's go for a solid inverted bubble effect on hover.
+          opacity: isHovering ? 1 : 0.3, 
         }}
         transition={{
           type: "spring",
@@ -144,12 +138,11 @@ export function CustomCursor() {
       >
         {/* 
            This inner div creates the "Hole" in the ring when NOT hovering.
-           On hover, we scale it down to 0 so the outer parent becomes a solid circle.
         */}
         <motion.div 
            className="w-full h-full bg-black rounded-full"
            animate={{
-            scale: isHovering ? 0 : 0.8 // 0 = solid circle (hover), 0.8 = ring (default)
+            scale: isHovering ? 0 : 0.8 
            }}
            transition={{ duration: 0.2 }}
         />

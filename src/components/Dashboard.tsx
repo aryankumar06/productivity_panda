@@ -18,7 +18,7 @@ import { CalendarWithPresets } from './ui/calendar-presets';
 import DittoDashboard from './DittoDashboard';
 import { Slider } from './ui/slider';
 
-// import { CustomCursor } from './ui/custom-cursor'; // Component not found
+
 
 type TabType = 'Your Day' | 'Inbox' | 'Dashboard' | 'Projects' | 'Tasks' | 'Habits' | 'Events' | 'Analytics' | 'Workspaces' | 'Settings';
 
