@@ -261,8 +261,10 @@ export default function Plan() {
                         }}
                         exit={{ opacity: 0, scale: 0.5 }}
                         transition={{
-                          duration: project.status === 'completed' ? 0.4 : 0.15,
-                          ease: project.status === 'completed' ? 'easeOut' : 'easeInOut',
+                          type: "spring",
+                          stiffness: 150,
+                          damping: 19,
+                          mass: 1.2
                         }}
                       >
                         {getStatusIcon(project.status)}
@@ -391,9 +393,11 @@ export default function Plan() {
                                     }}
                                     exit={{ opacity: 0, scale: 0.5 }}
                                     transition={{
-                                      duration: task.status === 'completed' ? 0.4 : 0.15,
-                                      ease: task.status === 'completed' ? 'easeOut' : 'easeInOut',
-                                    }}
+                                  type: "spring",
+                                  stiffness: 150,
+                                  damping: 19,
+                                  mass: 1.2
+                                }}
                                   >
                                     {getStatusIcon(task.status)}
                                   </motion.div>
@@ -493,8 +497,10 @@ export default function Plan() {
                                             }}
                                             exit={{ opacity: 0, scale: 0.5 }}
                                             transition={{
-                                              duration: subtask.status === 'completed' ? 0.4 : 0.15,
-                                              ease: subtask.status === 'completed' ? 'easeOut' : 'easeInOut',
+                                              type: "spring",
+                                              stiffness: 150,
+                                              damping: 19,
+                                              mass: 1.2
                                             }}
                                           >
                                             {subtask.status === 'completed' ? (

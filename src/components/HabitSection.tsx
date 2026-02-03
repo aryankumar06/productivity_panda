@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Target, Flame, Check, Trash2, Edit2 } from 'lucide-react';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import type { Database } from '../lib/database.types';
 
 type Habit = Database['public']['Tables']['habits']['Row'];
@@ -290,79 +291,107 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
       )}
 
       {loading ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading habits...</div>
-      ) : (
-        <div className="space-y-4">
-          {habits.map(habit => (
-            <div
-              key={habit.id}
-              className="p-4 border rounded-lg hover:border-blue-300 transition-all"
-              style={{ borderLeftColor: habit.color, borderLeftWidth: '4px' }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{habit.name}</h4>
-                  {habit.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{habit.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEdit(habit)}
-                    className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(habit.id)}
-                    className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Flame className={`w-5 h-5 ${habit.currentStreak > 0 ? 'text-orange-500' : 'text-gray-300 dark:text-neutral-600'}`} />
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {habit.currentStreak} day streak
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggleCompletion(habit)}
-                  className={`p-2 rounded-lg transition-all ${
-                    habit.isCompletedToday
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-gray-500 hover:bg-blue-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400'
-                  }`}
-                >
-                  <Check className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="flex gap-1">
-                {getWeekProgress(habit).map(({ date, completed }) => (
-                  <div
-                    key={date}
-                    className={`flex-1 h-2 rounded ${
-                      completed ? 'bg-green-500' : 'bg-gray-200 dark:bg-neutral-700'
-                    }`}
-                    title={date}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {habits.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No habits yet. Create your first habit to start tracking!
-            </div>
-          )}
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-500 dark:text-gray-400">Loading habits...</div>
         </div>
+      ) : (
+        <LayoutGroup id="habits">
+          <motion.div layout className="space-y-4">
+            <AnimatePresence mode="popLayout">
+              {habits.map(habit => (
+                <motion.div
+                  key={habit.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="p-4 border border-gray-200 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 hover:border-blue-300 dark:hover:border-blue-500/50 transition-all shadow-sm hover:shadow-md"
+                  style={{ borderLeftColor: habit.color, borderLeftWidth: '4px' }}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100">{habit.name}</h4>
+                      {habit.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{habit.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleEdit(habit)}
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded-md transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(habit.id)}
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded-md transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                        <Flame className={`w-4 h-4 ${habit.currentStreak > 0 ? 'text-orange-500' : 'text-gray-300 dark:text-neutral-600'}`} />
+                        <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
+                          {habit.currentStreak} DAY STREAK
+                        </span>
+                      </div>
+                    </div>
+                    <motion.button
+                      onClick={() => toggleCompletion(habit)}
+                      whileTap={{ scale: 0.9 }}
+                      className={`p-2 rounded-lg transition-all ${
+                        habit.isCompletedToday
+                          ? 'bg-green-500 text-white shadow-lg shadow-green-500/20'
+                          : 'bg-gray-100 dark:bg-neutral-900 text-gray-400 dark:text-gray-500 hover:bg-blue-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400'
+                      }`}
+                    >
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={habit.isCompletedToday ? 'done' : 'todo'}
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ 
+                            opacity: 1, 
+                            scale: habit.isCompletedToday ? [0.5, 1.2, 1] : 1,
+                          }}
+                          exit={{ opacity: 0, scale: 0.5 }}
+                          transition={{ 
+                            duration: habit.isCompletedToday ? 0.4 : 0.15,
+                            ease: habit.isCompletedToday ? 'easeOut' : 'easeInOut',
+                          }}
+                        >
+                          <Check className="w-5 h-5" />
+                        </motion.div>
+                      </AnimatePresence>
+                    </motion.button>
+                  </div>
+
+                  <div className="flex gap-1.5 px-0.5">
+                    {getWeekProgress(habit).map(({ date, completed }) => (
+                      <div
+                        key={date}
+                        className={`flex-1 h-1.5 rounded-full transition-colors ${
+                          completed ? 'bg-green-500 shadow-sm shadow-green-500/10' : 'bg-gray-100 dark:bg-neutral-700'
+                        }`}
+                        title={date}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {habits.length === 0 && (
+              <div className="text-center py-12 bg-gray-50/50 dark:bg-neutral-900/30 rounded-xl border-2 border-dashed border-gray-200 dark:border-neutral-800">
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No habits yet.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Consistency is key. Create your first habit!</p>
+              </div>
+            )}
+          </motion.div>
+        </LayoutGroup>
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Calendar, Clock, Trash2, Edit2 } from 'lucide-react';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import type { Database } from '../lib/database.types';
 
 type Event = Database['public']['Tables']['events']['Row'];
@@ -196,55 +197,67 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
       )}
 
       {loading ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading events...</div>
-      ) : (
-        <div className="space-y-3">
-          {events.map(event => (
-            <div
-              key={event.id}
-              className="p-4 border border-gray-200 dark:border-neutral-700 rounded-lg hover:border-blue-300 transition-all bg-white dark:bg-neutral-800"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h4>
-                  {event.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{event.description}</p>
-                  )}
-                  {(event.start_time || event.end_time) && (
-                    <div className="flex items-center gap-2 mt-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {event.start_time && formatTime(event.start_time)}
-                        {event.start_time && event.end_time && ' - '}
-                        {event.end_time && formatTime(event.end_time)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEdit(event)}
-                    className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(event.id)}
-                    className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {events.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No events scheduled for this day.
-            </div>
-          )}
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-500 dark:text-gray-400">Loading events...</div>
         </div>
+      ) : (
+        <LayoutGroup id="events">
+          <motion.div layout className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {events.map(event => (
+                <motion.div
+                  key={event.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-4 border border-gray-200 dark:border-neutral-700 rounded-xl hover:border-blue-300 dark:hover:border-blue-500/50 transition-all bg-white dark:bg-neutral-800 shadow-sm hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100">{event.title}</h4>
+                      {event.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{event.description}</p>
+                      )}
+                      {(event.start_time || event.end_time) && (
+                        <div className="flex items-center gap-2 mt-2 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg w-fit">
+                          <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">
+                            {event.start_time && formatTime(event.start_time)}
+                            {event.start_time && event.end_time && ' - '}
+                            {event.end_time && formatTime(event.end_time)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleEdit(event)}
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded-md transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded-md transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {events.length === 0 && (
+              <div className="text-center py-12 bg-gray-50/50 dark:bg-neutral-900/30 rounded-xl border-2 border-dashed border-gray-200 dark:border-neutral-800">
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No events scheduled.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Plan your day by adding an event!</p>
+              </div>
+            )}
+          </motion.div>
+        </LayoutGroup>
       )}
     </div>
   );
