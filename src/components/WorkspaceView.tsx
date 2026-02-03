@@ -112,7 +112,6 @@ export default function WorkspaceView() {
     const { 
         role, 
         isManager, 
-        isEmployee, 
         isMember,
         canManageMembers,
         canInviteUsers,
@@ -519,7 +518,7 @@ export default function WorkspaceView() {
                     </Button>
                 </div>
 
-                <ScrollArea className="h-[calc(100vh-320px)]">
+                <ScrollArea className="h-auto max-h-[200px] md:h-[calc(100vh-320px)]">
                     <div className="space-y-2 pr-2">
                         {loading ? (
                             <div className="text-center py-8 text-gray-400">Loading...</div>
@@ -578,19 +577,19 @@ export default function WorkspaceView() {
                                         <Layout className="w-5 h-5 text-gray-500" />
                                         {activeWorkspace.name}
                                     </h2>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                        isManager 
-                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
-                                            : 'bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-gray-300'
-                                    }`}>
-                                        {isManager ? '👑 Manager' : '👤 Employee'}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                        {members.length} member{members.length !== 1 ? 's' : ''}
-                                    </span>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                            isManager 
+                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
+                                                : 'bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-gray-300'
+                                        }`}>
+                                            {isManager ? '👑 Manager' : '👤 Employee'}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                            {members.length} member{members.length !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 {canInviteUsers && (
@@ -600,7 +599,7 @@ export default function WorkspaceView() {
                                         className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
                                     >
                                         <UserPlus className="w-4 h-4" />
-                                        Invite
+                                        <span className="hidden md:inline">Invite</span>
                                     </Button>
                                 )}
                                 {canCreateTasks && (
@@ -611,7 +610,7 @@ export default function WorkspaceView() {
                                         className="gap-2"
                                     >
                                         <Plus className="w-4 h-4" />
-                                        Add Task
+                                        <span className="hidden md:inline">Task</span>
                                     </Button>
                                 )}
                             </div>
@@ -661,7 +660,7 @@ export default function WorkspaceView() {
                                         value={[membersScrollPosition]}
                                         max={100}
                                         step={1}
-                                        onValueChange={(value) => {
+                                        onValueChange={(value: number[]) => {
                                             if (membersRef.current) {
                                                 const scrollWidth = membersRef.current.scrollWidth - membersRef.current.clientWidth;
                                                 membersRef.current.scrollLeft = (value[0] / 100) * scrollWidth;
@@ -766,7 +765,7 @@ export default function WorkspaceView() {
                                     value={[scrollPosition]}
                                     max={100}
                                     step={1}
-                                    onValueChange={(value) => {
+                                    onValueChange={(value: number[]) => {
                                         if (kanbanRef.current) {
                                             const scrollWidth = kanbanRef.current.scrollWidth - kanbanRef.current.clientWidth;
                                             kanbanRef.current.scrollLeft = (value[0] / 100) * scrollWidth;
@@ -932,15 +931,15 @@ interface ModalProps {
 
 function Modal({ onClose, title, children }: ModalProps) {
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800">
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
-                    <h3 className="text-lg font-bold dark:text-white">{title}</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4">
+            <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-3 md:p-4 border-b border-gray-200 dark:border-neutral-800 sticky top-0 bg-white dark:bg-neutral-900 z-10">
+                    <h3 className="text-base md:text-lg font-bold dark:text-white">{title}</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <div className="p-4">
+                <div className="p-3 md:p-4">
                     {children}
                 </div>
             </div>
@@ -970,15 +969,15 @@ function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDele
     };
 
     return (
-        <div className="bg-white dark:bg-neutral-900 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-700 group hover:border-blue-400 transition-colors">
+        <div className="bg-white dark:bg-neutral-900 p-2 md:p-3 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-700 group hover:border-blue-400 transition-colors">
             <div className="flex items-start justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1">{task.title}</h4>
+                <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 line-clamp-2">{task.title}</h4>
                 {isManager && (
                     <button 
                         onClick={() => onDelete(task.id)}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-gray-400 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 p-1"
                     >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                     </button>
                 )}
             </div>
@@ -997,7 +996,7 @@ function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDele
                     <div className="relative">
                         <button
                             onClick={() => setShowStatusMenu(!showStatusMenu)}
-                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 py-1"
                         >
                             Move to...
                             <ChevronRight className={`w-3 h-3 transition-transform ${showStatusMenu ? 'rotate-90' : ''}`} />

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TaskSection from './TaskSection';
 import HabitSection from './HabitSection';
 import EventSection from './EventSection';
-import { GlowingEffect } from './ui/GlowingEffect'; 
+import { GlowingEffect } from './ui/glowing-effect'; 
 import { ThemeToggle } from './ui/theme-toggle';
 import { RequestFeatureForm } from './RequestFeatureForm';
 import InboxView from './InboxView';
@@ -15,11 +15,12 @@ import AnalyticsSection from './AnalyticsSection';
 import SettingsView from './SettingsView';
 import { SlideTabs } from './ui/slide-tabs';
 import { CalendarWithPresets } from './ui/calendar-presets';
+import DittoDashboard from './DittoDashboard';
 import { Slider } from './ui/slider';
 
-// import { CustomCursor } from './ui/custom-cursor'; // Component not found
 
-type TabType = 'Your Day' | 'Inbox' | 'Dashboard' | 'Tasks' | 'Habits' | 'Events' | 'Analytics' | 'Workspaces' | 'Settings';
+
+type TabType = 'Your Day' | 'Inbox' | 'Dashboard' | 'Projects' | 'Tasks' | 'Habits' | 'Events' | 'Analytics' | 'Workspaces' | 'Settings';
 
 
 
@@ -81,6 +82,16 @@ export default function Dashboard() {
                 <WorkspaceView />
             </div>
         );
+      case 'Projects':
+        return (
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Hierarchical task planning and execution.</p>
+            </div>
+            <DittoDashboard />
+          </div>
+        );
       case 'Tasks':
         return (
           <div className="max-w-4xl mx-auto relative rounded-xl">
@@ -138,7 +149,7 @@ export default function Dashboard() {
             </div>
 
             <SlideTabs 
-                tabs={['Your Day', 'Inbox', 'Dashboard', 'Workspaces', 'Analytics', 'Settings']} 
+                tabs={['Your Day', 'Inbox', 'Dashboard', 'Projects', 'Workspaces', 'Analytics', 'Settings']} 
                 activeTab={activeTab} 
                 onChange={(tab) => setActiveTab(tab as TabType)}
                 className="hidden md:flex"

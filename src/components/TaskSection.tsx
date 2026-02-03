@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, CheckSquare, Circle, Clock, AlertCircle, Trash2, Edit2, MessageSquare } from 'lucide-react';
+import { Plus, CheckSquare, Circle, Clock, AlertCircle, Trash2, Edit2, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import type { Database } from '../lib/database.types';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
@@ -263,88 +264,139 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       )}
 
       {loading ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading tasks...</div>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-500 dark:text-gray-400">Loading tasks...</div>
+        </div>
       ) : (
         <div className="space-y-6">
           {overdueTasks.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-red-600 mb-3">Overdue</h3>
-              <div className="space-y-2">
-                {overdueTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
+              <h3 className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-3">Overdue</h3>
+              <LayoutGroup id="overdue">
+                <motion.div layout className="space-y-3">
+                  <AnimatePresence mode="popLayout">
+                    {overdueTasks.map(task => (
+                      <motion.div
+                        key={task.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <TaskItem
+                          task={task}
+                          onToggle={toggleStatus}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          getPriorityColor={getPriorityColor}
+                          getPriorityIcon={getPriorityIcon}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+              </LayoutGroup>
             </div>
           )}
 
           {todayTasks.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Today</h3>
-              <div className="space-y-2">
-                {todayTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
+              <h3 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Today</h3>
+              <LayoutGroup id="today">
+                <motion.div layout className="space-y-3">
+                  <AnimatePresence mode="popLayout">
+                    {todayTasks.map(task => (
+                      <motion.div
+                        key={task.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <TaskItem
+                          task={task}
+                          onToggle={toggleStatus}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          getPriorityColor={getPriorityColor}
+                          getPriorityIcon={getPriorityIcon}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+              </LayoutGroup>
             </div>
           )}
 
           {upcomingTasks.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Upcoming</h3>
-              <div className="space-y-2">
-                {upcomingTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
+              <h3 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Upcoming</h3>
+              <LayoutGroup id="upcoming">
+                <motion.div layout className="space-y-3">
+                  <AnimatePresence mode="popLayout">
+                    {upcomingTasks.map(task => (
+                      <motion.div
+                        key={task.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <TaskItem
+                          task={task}
+                          onToggle={toggleStatus}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          getPriorityColor={getPriorityColor}
+                          getPriorityIcon={getPriorityIcon}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+              </LayoutGroup>
             </div>
           )}
 
           {noDateTasks.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">No Due Date</h3>
-              <div className="space-y-2">
-                {noDateTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
+              <h3 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">No Due Date</h3>
+              <LayoutGroup id="nodate">
+                <motion.div layout className="space-y-3">
+                  <AnimatePresence mode="popLayout">
+                    {noDateTasks.map(task => (
+                      <motion.div
+                        key={task.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <TaskItem
+                          task={task}
+                          onToggle={toggleStatus}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          getPriorityColor={getPriorityColor}
+                          getPriorityIcon={getPriorityIcon}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+              </LayoutGroup>
             </div>
           )}
 
           {tasks.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No tasks yet. Create your first task to get started!
+            <div className="text-center py-12 bg-gray-50/50 dark:bg-neutral-900/30 rounded-xl border-2 border-dashed border-gray-200 dark:border-neutral-800">
+              <p className="text-gray-500 dark:text-gray-400 font-medium">No tasks found for this date.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Get started by adding a new task!</p>
             </div>
           )}
         </div>
@@ -412,24 +464,53 @@ function TaskItem({
   };
 
   return (
-    <div className={`p-4 border rounded-xl transition-all ${task.status === 'completed' ? 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700' : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-blue-300'}`}>
-      <div className="flex items-start gap-3">
-        <button
+    <motion.div 
+      layout
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ 
+        layout: { type: "spring", stiffness: 200, damping: 25 },
+        opacity: { duration: 0.3 },
+        scale: { duration: 0.3 }
+      }}
+      className={`p-4 border rounded-xl transition-colors duration-500 shadow-sm ${task.status === 'completed' ? 'bg-gray-50/80 dark:bg-neutral-900/60 border-gray-200 dark:border-neutral-800' : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-blue-400 dark:hover:border-blue-500/50 hover:shadow-md'}`}
+    >
+      <div className="flex items-start gap-4">
+        <motion.button
           onClick={() => onToggle(task)}
-          className="mt-1 flex-shrink-0"
+          className="mt-1 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+          whileTap={{ scale: 0.9 }}
         >
-          {task.status === 'completed' ? (
-            <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
-              <CheckSquare className="w-4 h-4 text-white" />
-            </div>
-          ) : (
-            <div className="w-5 h-5 border-2 border-gray-300 dark:border-neutral-700 rounded hover:border-blue-600 transition-colors" />
-          )}
-        </button>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={task.status}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ 
+                opacity: 1, 
+                scale: task.status === 'completed' ? [0.5, 1.2, 1] : 1,
+              }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={{
+                type: "spring",
+                stiffness: 150,
+                damping: 19,
+                mass: 1.2
+              }}
+            >
+              {task.status === 'completed' ? (
+                <CheckCircle2 className="w-5.5 h-5.5 text-blue-600 dark:text-blue-500" />
+              ) : (
+                <Circle className="w-5.5 h-5.5 text-gray-300 dark:text-neutral-600 hover:text-blue-400 transition-colors" />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </motion.button>
         <div className="flex-1 min-w-0">
-          <h4 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+          <h4 className={`font-semibold text-base ${task.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
             {task.title}
           </h4>
+
           {task.description && (
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{task.description}</p>
           )}
@@ -498,6 +579,6 @@ function TaskItem({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
