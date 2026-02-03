@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckSquare, LogOut } from 'lucide-react';
+import { LayoutGrid, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskSection from './TaskSection';
 import HabitSection from './HabitSection';
@@ -16,6 +16,7 @@ import SettingsView from './SettingsView';
 import { SlideTabs } from './ui/slide-tabs';
 import { CalendarWithPresets } from './ui/calendar-presets';
 import DittoDashboard from './DittoDashboard';
+import { Slider } from './ui/slider';
 
 // import { CustomCursor } from './ui/custom-cursor'; // Component not found
 
@@ -28,6 +29,10 @@ export default function Dashboard() {
   const { signOut } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
+  
+  // Mobile tabs scroll
+  const mobileTabsRef = useRef<HTMLDivElement>(null);
+  const [tabsScrollPosition, setTabsScrollPosition] = useState(0);
 
   const handleDateChange = (date: Date | undefined) => {
       if (date) {
@@ -133,13 +138,10 @@ export default function Dashboard() {
           <div className="flex flex-col md:flex-row justify-between items-center py-4 gap-4">
             <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                  <CheckSquare className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+                  <LayoutGrid className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Productivity Hub</h1>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">An EliteX Solutions Product</p>
-                </div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Productivity Hub</h1>
               </div>
               <div className="md:hidden flex items-center gap-2">
                  <ThemeToggle />
@@ -165,13 +167,42 @@ export default function Dashboard() {
               </button>
             </div>
             
-            {/* Mobile Navigation */}
-            <div className="md:hidden w-full overflow-x-auto pb-2">
-                 <SlideTabs 
-                    tabs={['Your Day', 'Inbox', 'Dashboard', 'Workspaces', 'Settings']} 
-                    activeTab={activeTab} 
-                    onChange={(tab) => setActiveTab(tab as TabType)}
+            {/* Mobile Navigation with Custom Slider */}
+            <div className="md:hidden w-full">
+              <div 
+                ref={mobileTabsRef}
+                className="overflow-x-auto scrollbar-hide scroll-smooth"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                onScroll={(e) => {
+                  // Use requestAnimationFrame for smoother state updates during scroll
+                  requestAnimationFrame(() => {
+                    const target = e.currentTarget;
+                    const scrollPercentage = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100 || 0;
+                    setTabsScrollPosition(scrollPercentage);
+                  });
+                }}
+              >
+                <SlideTabs 
+                  tabs={['Your Day', 'Inbox', 'Dashboard', 'Workspaces', 'Settings']} 
+                  activeTab={activeTab} 
+                  onChange={(tab) => setActiveTab(tab as TabType)}
                 />
+              </div>
+              <div className="px-2 pt-2 pb-1">
+                <Slider
+                  value={[tabsScrollPosition]}
+                  max={100}
+                  step={1}
+                  onValueChange={(value) => {
+                    if (mobileTabsRef.current) {
+                      const scrollWidth = mobileTabsRef.current.scrollWidth - mobileTabsRef.current.clientWidth;
+                      mobileTabsRef.current.scrollLeft = (value[0] / 100) * scrollWidth;
+                      setTabsScrollPosition(value[0]);
+                    }
+                  }}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
         </div>

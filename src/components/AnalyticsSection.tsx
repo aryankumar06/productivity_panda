@@ -6,13 +6,21 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
     LineChart, Line
 } from 'recharts';
-import { CheckCircle2, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
+import { CheckCircle2, TrendingUp, Calendar, AlertCircle, Target } from 'lucide-react';
+import {
+    ChartConfig,
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from './ui/line-chart';
+import { Card as ChartCard, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
 
 interface AnalyticsData {
     taskStats: { name: string; value: number; color: string }[];
     completionRate: number;
     weeklyProgress: { name: string; completed: number }[];
-    habitStreaks: { name: string; streak: number }[];
+    habitStreaks: { date: string; completed: number; total: number }[];
     totalTasks: number;
     completedTasks: number;
 }
@@ -86,24 +94,41 @@ export default function AnalyticsSection() {
             };
         });
 
-        // 3. Habit Streaks
-        // Calculate basic streak for top 5 habits
-        const habitStreaks = habits.map(h => {
-             // Simplified streak calc (same logic as HabitSection would be ideal, but keeping it simple for overview)
-             // We'll trust the HabitSection logic for exactness, here we approximate or re-use logic if exported.
-             // For now, let's just count total completions as a proxy for "adherence" or use length of completions
-             // If we want "Current Streak", we'd need the full algo. Let's strictly count total completions for now to show "Activity".
-             return {
-                 name: h.name,
-                 streak: h.habit_completions.length // visualizing Total Completions for now
-             };
-        }).sort((a, b) => b.streak - a.streak).slice(0, 5);
+        // 3. Habit Completion Trends (for Line Chart)
+        // Get last 7 days of habit completions
+        const last7DaysHabits = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            return d.toISOString().split('T')[0];
+        });
+
+        const habitCompletionTrend = last7DaysHabits.map(date => {
+            // Count how many habits were completed on this date
+            const completedCount = habits.reduce((count, habit) => {
+                if (!habit.habit_completions || !Array.isArray(habit.habit_completions)) {
+                    return count;
+                }
+                const completedOnDate = habit.habit_completions.some((c: any) => 
+                    c.completed_date === date
+                );
+                return count + (completedOnDate ? 1 : 0);
+            }, 0);
+            
+            return {
+                date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+                completed: completedCount,
+                total: habits.length || 0
+            };
+        });
+
+        console.log('Habit Completion Trend Data:', habitCompletionTrend);
+        console.log('Total Habits:', habits.length);
 
         setData({
             taskStats,
             completionRate: tasks.length ? Math.round((completed / tasks.length) * 100) : 0,
             weeklyProgress,
-            habitStreaks,
+            habitStreaks: habitCompletionTrend,
             totalTasks: tasks.length,
             completedTasks: completed
         });
@@ -170,24 +195,129 @@ export default function AnalyticsSection() {
                     </div>
                 </div>
 
-                {/* Habit Adherence (Top 5) */}
-                 <div className="bg-white dark:bg-neutral-800 p-6 rounded-xl border border-gray-200 dark:border-neutral-700 shadow-sm lg:col-span-2">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Top Habits (Total Completions)</h3>
-                    <div className="h-[250px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data.habitStreaks} layout="vertical" margin={{ left: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} horizontal={false} />
-                                <XAxis type="number" stroke="#888888" fontSize={12} hide />
-                                <YAxis dataKey="name" type="category" stroke="#888888" fontSize={12} width={100} tickLine={false} axisLine={false} />
-                                <Tooltip 
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                    contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }}
+                {/* Habit Completion Trend - Glowing Line Chart */}
+                <ChartCard className="lg:col-span-2 border-gray-200 dark:border-neutral-700">
+                    <CardHeader>
+                        <CardTitle className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            Habit Completion Trend
+                            {(() => {
+                                const chartData = data.habitStreaks;
+                                if (chartData.length < 2) return null;
+                                
+                                const firstHalf = chartData.slice(0, Math.floor(chartData.length / 2));
+                                const secondHalf = chartData.slice(Math.floor(chartData.length / 2));
+                                
+                                const firstAvg = firstHalf.reduce((sum, item) => sum + item.completed, 0) / firstHalf.length;
+                                const secondAvg = secondHalf.reduce((sum, item) => sum + item.completed, 0) / secondHalf.length;
+                                
+                                const trend = ((secondAvg - firstAvg) / (firstAvg || 1)) * 100;
+                                const trendValue = Math.abs(Math.round(trend * 10) / 10);
+                                const isPositive = trend >= 0;
+                                
+                                return (
+                                    <Badge
+                                        variant="outline"
+                                        className={`${
+                                            isPositive 
+                                                ? 'text-green-500 bg-green-500/10 border-none' 
+                                                : 'text-red-500 bg-red-500/10 border-none'
+                                        } ml-2`}
+                                    >
+                                        {isPositive ? <TrendingUp className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
+                                        <span>{trendValue}%</span>
+                                    </Badge>
+                                );
+                            })()}
+                        </CardTitle>
+                        <CardDescription className="text-gray-500 dark:text-gray-400">
+                            Your weekly habit completion progress
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {data.habitStreaks.every(d => d.total === 0) ? (
+                            <div className="h-[300px] flex items-center justify-center text-gray-400 dark:text-gray-500">
+                                <div className="text-center">
+                                    <Target className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">No habits tracked yet</p>
+                                    <p className="text-xs mt-1">Start tracking habits to see your progress here</p>
+                                </div>
+                            </div>
+                        ) : (
+                        <ChartContainer config={{
+                            completed: {
+                                label: "Completed",
+                                color: "hsl(var(--chart-1))",
+                            },
+                            total: {
+                                label: "Total Habits",
+                                color: "hsl(var(--chart-2))",
+                            },
+                        }}>
+                            <LineChart
+                                accessibilityLayer
+                                data={data.habitStreaks}
+                                margin={{
+                                    left: 12,
+                                    right: 12,
+                                    top: 12,
+                                    bottom: 12,
+                                }}
+                            >
+                                <CartesianGrid vertical={false} className="stroke-gray-200 dark:stroke-neutral-700" />
+                                <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={8}
+                                    className="text-gray-600 dark:text-gray-400"
                                 />
-                                <Bar dataKey="streak" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                                <YAxis
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={8}
+                                    className="text-gray-600 dark:text-gray-400"
+                                    domain={[0, 'auto']}
+                                />
+                                <ChartTooltip
+                                    cursor={false}
+                                    content={<ChartTooltipContent hideLabel />}
+                                />
+                                <Line
+                                    dataKey="completed"
+                                    type="monotone"
+                                    stroke="var(--chart-1)"
+                                    strokeWidth={3}
+                                    dot={{ fill: "var(--chart-1)", r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                    filter="url(#habit-line-glow)"
+                                />
+                                <Line
+                                    dataKey="total"
+                                    type="monotone"
+                                    stroke="var(--chart-2)"
+                                    strokeWidth={3}
+                                    strokeDasharray="5 5"
+                                    dot={{ fill: "var(--chart-2)", r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                    filter="url(#habit-line-glow)"
+                                />
+                                <defs>
+                                    <filter
+                                        id="habit-line-glow"
+                                        x="-20%"
+                                        y="-20%"
+                                        width="140%"
+                                        height="140%"
+                                    >
+                                        <feGaussianBlur stdDeviation="10" result="blur" />
+                                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                    </filter>
+                                </defs>
+                            </LineChart>
+                        </ChartContainer>
+                        )}
+                    </CardContent>
+                </ChartCard>
             </div>
         </div>
     );
