@@ -91,6 +91,36 @@ create table if not exists public.notifications (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- GITHUB REPOS TABLE (for imported repositories)
+create table if not exists public.github_repos (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  repo_id bigint not null,
+  name text not null,
+  full_name text not null,
+  description text,
+  language text,
+  stars_count integer default 0,
+  open_issues_count integer default 0,
+  last_synced_at timestamp with time zone,
+  imported_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(user_id, repo_id)
+);
+
+-- REPO TASKS TABLE (tasks generated from GitHub issues)
+create table if not exists public.repo_tasks (
+  id uuid default uuid_generate_v4() primary key,
+  repo_id uuid references public.github_repos on delete cascade,
+  user_id uuid references auth.users on delete cascade,
+  title text not null,
+  description text,
+  source_type text check (source_type in ('issue', 'pr', 'milestone', 'manual')),
+  source_id text,
+  status text default 'todo' check (status in ('todo', 'in_progress', 'done')),
+  priority text default 'medium' check (priority in ('low', 'medium', 'high', 'urgent')),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- =====================================================
 -- STEP 2: HELPER FUNCTIONS (SECURITY DEFINER - bypass RLS)
 -- These MUST be created BEFORE policies that use them
@@ -150,44 +180,54 @@ alter table public.notifications enable row level security;
 -- =====================================================
 
 -- USER PROFILES POLICIES
+drop policy if exists "Users can view any profile" on public.user_profiles;
 create policy "Users can view any profile" on public.user_profiles
   for select using (true);
 
+drop policy if exists "Users can update own profile" on public.user_profiles;
 create policy "Users can update own profile" on public.user_profiles
   for update using (auth.uid() = id);
 
+drop policy if exists "Users can insert own profile" on public.user_profiles;
 create policy "Users can insert own profile" on public.user_profiles
   for insert with check (auth.uid() = id);
 
 -- WORKSPACES POLICIES (using helper functions)
+drop policy if exists "Users can view workspaces they belong to" on public.workspaces;
 create policy "Users can view workspaces they belong to" on public.workspaces
   for select using (
     auth.uid() = owner_id 
     or is_workspace_member(id, auth.uid())
   );
 
+drop policy if exists "Users can create workspaces" on public.workspaces;
 create policy "Users can create workspaces" on public.workspaces
   for insert with check (auth.uid() = owner_id);
 
+drop policy if exists "Only owners can update workspaces" on public.workspaces;
 create policy "Only owners can update workspaces" on public.workspaces
   for update using (auth.uid() = owner_id);
 
+drop policy if exists "Only owners can delete workspaces" on public.workspaces;
 create policy "Only owners can delete workspaces" on public.workspaces
   for delete using (auth.uid() = owner_id);
 
 -- WORKSPACE MEMBERS POLICIES (using helper functions)
+drop policy if exists "Members can view workspace members" on public.workspace_members;
 create policy "Members can view workspace members" on public.workspace_members
   for select using (
     is_workspace_member(workspace_id, auth.uid())
     or is_workspace_owner(workspace_id, auth.uid())
   );
 
+drop policy if exists "Managers or owners can add members" on public.workspace_members;
 create policy "Managers or owners can add members" on public.workspace_members
   for insert with check (
     is_workspace_manager(workspace_id, auth.uid())
     or is_workspace_owner(workspace_id, auth.uid())
   );
 
+drop policy if exists "Invitees can join workspace" on public.workspace_members;
 create policy "Invitees can join workspace" on public.workspace_members
   for insert with check (
     auth.uid() = user_id
@@ -200,12 +240,14 @@ create policy "Invitees can join workspace" on public.workspace_members
     )
   );
 
+drop policy if exists "Managers can remove members" on public.workspace_members;
 create policy "Managers can remove members" on public.workspace_members
   for delete using (
     is_workspace_manager(workspace_id, auth.uid())
   );
 
 -- WORKSPACE INVITES POLICIES
+drop policy if exists "Users can view relevant invites" on public.workspace_invites;
 create policy "Users can view relevant invites" on public.workspace_invites
   for select using (
     auth.uid() = invitee_id 
@@ -213,37 +255,44 @@ create policy "Users can view relevant invites" on public.workspace_invites
     or is_workspace_manager(workspace_id, auth.uid())
   );
 
+drop policy if exists "Managers can create invites" on public.workspace_invites;
 create policy "Managers can create invites" on public.workspace_invites
   for insert with check (
     is_workspace_manager(workspace_id, auth.uid())
   );
 
+drop policy if exists "Invitees can update invite status" on public.workspace_invites;
 create policy "Invitees can update invite status" on public.workspace_invites
   for update using (auth.uid() = invitee_id);
 
 -- WORKSPACE TASKS POLICIES
+drop policy if exists "Members can view tasks" on public.workspace_tasks;
 create policy "Members can view tasks" on public.workspace_tasks
   for select using (
     is_workspace_member(workspace_id, auth.uid())
   );
 
+drop policy if exists "Managers can create tasks" on public.workspace_tasks;
 create policy "Managers can create tasks" on public.workspace_tasks
   for insert with check (
     is_workspace_manager(workspace_id, auth.uid())
   );
 
+drop policy if exists "Managers can update any task" on public.workspace_tasks;
 create policy "Managers can update any task" on public.workspace_tasks
   for update using (
     is_workspace_manager(workspace_id, auth.uid())
     or auth.uid() = assignee_id
   );
 
+drop policy if exists "Managers can delete tasks" on public.workspace_tasks;
 create policy "Managers can delete tasks" on public.workspace_tasks
   for delete using (
     is_workspace_manager(workspace_id, auth.uid())
   );
 
 -- TASK COMMENTS POLICIES
+drop policy if exists "Members can view comments" on public.task_comments;
 create policy "Members can view comments" on public.task_comments
   for select using (
     exists (
@@ -253,6 +302,7 @@ create policy "Members can view comments" on public.task_comments
     )
   );
 
+drop policy if exists "Members can add comments" on public.task_comments;
 create policy "Members can add comments" on public.task_comments
   for insert with check (
     exists (
@@ -263,16 +313,58 @@ create policy "Members can add comments" on public.task_comments
   );
 
 -- NOTIFICATIONS POLICIES
+drop policy if exists "Users can view own notifications" on public.notifications;
 create policy "Users can view own notifications" on public.notifications
   for select using (auth.uid() = user_id);
 
+drop policy if exists "Users can update own notifications" on public.notifications;
 create policy "Users can update own notifications" on public.notifications
   for update using (auth.uid() = user_id);
 
+drop policy if exists "Anyone can create notifications" on public.notifications;
 create policy "Anyone can create notifications" on public.notifications
   for insert with check (true);
 
+drop policy if exists "Users can delete own notifications" on public.notifications;
 create policy "Users can delete own notifications" on public.notifications
+  for delete using (auth.uid() = user_id);
+
+-- Enable RLS on GitHub tables
+alter table public.github_repos enable row level security;
+alter table public.repo_tasks enable row level security;
+
+-- GITHUB REPOS POLICIES
+drop policy if exists "Users can view own repos" on public.github_repos;
+create policy "Users can view own repos" on public.github_repos
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own repos" on public.github_repos;
+create policy "Users can insert own repos" on public.github_repos
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own repos" on public.github_repos;
+create policy "Users can update own repos" on public.github_repos
+  for update using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own repos" on public.github_repos;
+create policy "Users can delete own repos" on public.github_repos
+  for delete using (auth.uid() = user_id);
+
+-- REPO TASKS POLICIES
+drop policy if exists "Users can view own repo tasks" on public.repo_tasks;
+create policy "Users can view own repo tasks" on public.repo_tasks
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own repo tasks" on public.repo_tasks;
+create policy "Users can insert own repo tasks" on public.repo_tasks
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own repo tasks" on public.repo_tasks;
+create policy "Users can update own repo tasks" on public.repo_tasks
+  for update using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own repo tasks" on public.repo_tasks;
+create policy "Users can delete own repo tasks" on public.repo_tasks
   for delete using (auth.uid() = user_id);
 
 -- =====================================================

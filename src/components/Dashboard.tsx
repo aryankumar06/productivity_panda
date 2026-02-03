@@ -13,19 +13,21 @@ import EisenhowerMatrix from './EisenhowerMatrix';
 import WorkspaceView from './WorkspaceView';
 import AnalyticsSection from './AnalyticsSection';
 import SettingsView from './SettingsView';
+import ReposView from './ReposView';
+import DittoDashboard from './DittoDashboard';
 import { SlideTabs } from './ui/slide-tabs';
 import { CalendarWithPresets } from './ui/calendar-presets';
 import { Slider } from './ui/slider';
 
 // import { CustomCursor } from './ui/custom-cursor'; // Component not found
 
-type TabType = 'Your Day' | 'Inbox' | 'Dashboard' | 'Tasks' | 'Habits' | 'Events' | 'Analytics' | 'Workspaces' | 'Settings';
+type TabType = 'Your Day' | 'Inbox' | 'Dashboard' | 'Projects' | 'Tasks' | 'Habits' | 'Events' | 'Analytics' | 'Workspaces' | 'Repos' | 'Settings';
 
 
 
 
 export default function Dashboard() {
-  const { signOut } = useAuth();
+  const { signOut, isGitHubUser } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
   
@@ -75,6 +77,8 @@ export default function Dashboard() {
              <InboxView />
            </div>
         );
+      case 'Projects':
+        return <DittoDashboard />;
       case 'Workspaces':
         return (
             <div className="max-w-6xl mx-auto">
@@ -108,6 +112,12 @@ export default function Dashboard() {
              <AnalyticsSection />
            </div>
         );
+      case 'Repos':
+        return (
+            <div className="max-w-6xl mx-auto">
+                <ReposView />
+            </div>
+        );
       case 'Settings':
         return (
             <div className="max-w-4xl mx-auto">
@@ -138,7 +148,10 @@ export default function Dashboard() {
             </div>
 
             <SlideTabs 
-                tabs={['Your Day', 'Inbox', 'Dashboard', 'Workspaces', 'Analytics', 'Settings']} 
+                tabs={isGitHubUser 
+                  ? ['Your Day', 'Inbox', 'Dashboard', 'Projects', 'Workspaces', 'Repos', 'Analytics', 'Settings']
+                  : ['Your Day', 'Inbox', 'Dashboard', 'Projects', 'Workspaces', 'Analytics', 'Settings']
+                } 
                 activeTab={activeTab} 
                 onChange={(tab) => setActiveTab(tab as TabType)}
                 className="hidden md:flex"
@@ -172,7 +185,7 @@ export default function Dashboard() {
                 }}
               >
                 <SlideTabs 
-                  tabs={['Your Day', 'Inbox', 'Dashboard', 'Workspaces', 'Settings']} 
+                  tabs={['Your Day', 'Inbox', 'Dashboard', 'Projects', 'Workspaces', 'Settings']} 
                   activeTab={activeTab} 
                   onChange={(tab) => setActiveTab(tab as TabType)}
                 />
@@ -204,6 +217,7 @@ export default function Dashboard() {
             <p className="text-gray-500 dark:text-gray-400">
               {activeTab === 'Your Day' ? 'Focus on what matters most.' : 
                activeTab === 'Dashboard' ? 'Your productivity at a glance.' :
+               activeTab === 'Projects' ? 'Hierarchical task planning and execution.' :
                activeTab === 'Inbox' ? 'Stay updated with your team.' :
                activeTab === 'Workspaces' ? 'Manage your projects and teams.' :
                'Manage your productivity.'}

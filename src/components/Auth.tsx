@@ -20,7 +20,7 @@ export default function Auth() {
   const [message, setMessage] = useState('');
   const [resending, setResending] = useState(false);
   const [userType, setUserType] = useState<UserType>('professional');
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithProvider } = useAuth();
 
   // Check for password reset token in URL
   useEffect(() => {
@@ -306,6 +306,7 @@ export default function Auth() {
                   <Button 
                     type="button" 
                     className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                    onClick={() => signInWithProvider('google')}
                   >
                     <GoogleIcon className="size-5 me-2" />
                     Continue with Google
@@ -320,6 +321,7 @@ export default function Auth() {
                   <Button 
                     type="button" 
                     className="w-full bg-white hover:bg-gray-100 text-black font-medium h-12 rounded-lg"
+                    onClick={() => signInWithProvider('github')}
                   >
                     <Github className="size-5 me-2" />
                     Continue with GitHub

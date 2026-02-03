@@ -7,12 +7,16 @@ interface SignUpResult {
   error: AuthError | null;
 }
 
+type OAuthProvider = 'github' | 'google';
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithProvider: (provider: OAuthProvider) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  isGitHubUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,12 +63,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const signInWithProvider = async (provider: OAuthProvider) => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin,
+          scopes: provider === 'github' ? 'repo read:user' : undefined,
+        },
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  // Check if user authenticated via GitHub
+  const isGitHubUser = user?.app_metadata?.provider === 'github';
+
   const value = {
     user,
     loading,
     signUp,
     signIn,
+    signInWithProvider,
     signOut,
+    isGitHubUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

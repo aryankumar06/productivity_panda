@@ -1,14 +1,56 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, CheckSquare, Circle, Clock, AlertCircle, Trash2, Edit2, MessageSquare } from 'lucide-react';
+import { Plus, CheckSquare, Clock, AlertCircle, Circle, Trash2, Edit2, MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Database } from '../lib/database.types';
+import TaskPlan from './ui/task-plan';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
+
+// AgentTask type for plan view
+interface AgentTask {
+  id: string;
+  title: string;
+  description: string;
+  status: 'completed' | 'in-progress' | 'pending' | 'need-help' | 'failed';
+  priority: 'low' | 'medium' | 'high';
+  level: number;
+  dependencies: string[];
+  subtasks: any[];
+  due_date?: string | null;
+}
 
 interface TaskSectionProps {
   selectedDate: string;
 }
+
+// Helper to convert database task status to AgentTask status
+const mapDbStatusToAgentStatus = (status: Task['status']): AgentTask['status'] => {
+  switch (status) {
+    case 'completed': return 'completed';
+    case 'in_progress': return 'in-progress';
+    case 'todo': return 'pending';
+    default: return 'pending';
+  }
+};
+
+// Helper to convert AgentTask status back to database status
+const mapAgentStatusToDbStatus = (status: AgentTask['status']): Task['status'] => {
+  switch (status) {
+    case 'completed': return 'completed';
+    case 'in-progress': return 'in_progress';
+    case 'pending':
+    case 'need-help':
+    case 'failed':
+    default: return 'todo';
+  }
+};
+
+// Helper to convert database priority to AgentTask priority
+const mapDbPriorityToAgentPriority = (priority: Task['priority']): AgentTask['priority'] => {
+  return priority as AgentTask['priority'];
+};
 
 export default function TaskSection({ selectedDate }: TaskSectionProps) {
   const { user } = useAuth();
@@ -24,6 +66,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
     due_date: selectedDate
   });
   const [errorMsg, setErrorMsg] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'plan'>('plan');
 
   useEffect(() => {
     if (user) {
@@ -36,11 +79,12 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
   }, [user, selectedDate]);
 
   const fetchTasks = async () => {
+    if (!user) return;
     setLoading(true);
     const { data: dataRaw, error } = await supabase
       .from('tasks')
       .select('*')
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
     const data = dataRaw as Task[] | null;
 
@@ -115,6 +159,13 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
     setShowForm(true);
   };
 
+  const handleAgentTaskEdit = (agentTask: AgentTask) => {
+    const originalTask = tasks.find(t => t.id === agentTask.id);
+    if (originalTask) {
+      handleEdit(originalTask);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     const { error } = await supabase
       .from('tasks')
@@ -148,6 +199,27 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
     }
   };
 
+  const handleAgentTaskUpdate = async (taskId: string, updates: Partial<AgentTask>) => {
+    if (updates.status) {
+      const dbStatus = mapAgentStatusToDbStatus(updates.status);
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          status: dbStatus,
+          completed_at: dbStatus === 'completed' ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        } as Database['public']['Tables']['tasks']['Update'])
+        .eq('id', taskId);
+
+      if (error) {
+        setErrorMsg(error.message);
+      } else {
+        await fetchTasks();
+        setErrorMsg('');
+      }
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30';
@@ -166,188 +238,288 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
     }
   };
 
+  // Convert database tasks to AgentTask format for the plan view
+  const convertToAgentTasks = (dbTasks: Task[]): AgentTask[] => {
+    // Group tasks by date
+    const groupedByDate: { [date: string]: Task[] } = {};
+    
+    dbTasks.forEach(task => {
+      const date = task.due_date || 'no-date';
+      if (!groupedByDate[date]) {
+        groupedByDate[date] = [];
+      }
+      groupedByDate[date].push(task);
+    });
+
+    // Convert each task to AgentTask format
+    // Tasks on the same day can be linked as parent/subtask or shown independently
+    return dbTasks.map((task): AgentTask => ({
+      id: task.id,
+      title: task.title,
+      description: task.description || '',
+      status: mapDbStatusToAgentStatus(task.status),
+      priority: mapDbPriorityToAgentPriority(task.priority),
+      level: 0,
+      dependencies: [],
+      subtasks: [], // Could be populated if you have subtasks in your database
+      due_date: task.due_date,
+    }));
+  };
+
   const todayTasks = tasks.filter(t => t.due_date === selectedDate);
   const overdueTasks = tasks.filter(t => t.due_date && t.due_date < selectedDate && t.status !== 'completed');
   const upcomingTasks = tasks.filter(t => t.due_date && t.due_date > selectedDate);
   const noDateTasks = tasks.filter(t => !t.due_date);
 
+  // Prepare tasks for plan view (combine all relevant tasks)
+  const planViewTasks = convertToAgentTasks([
+    ...overdueTasks,
+    ...todayTasks,
+    ...upcomingTasks.slice(0, 5), // Show next 5 upcoming
+    ...noDateTasks.slice(0, 5), // Show 5 without date
+  ]);
+
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
           <CheckSquare className="w-6 h-6 text-blue-600" />
-          Tasks
-        </h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
+          
+          {/* View Mode Toggle - Simplified and explicit */}
+          <div className="flex items-center ml-2 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 border border-gray-200 dark:border-neutral-700">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                viewMode === 'list' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setViewMode('plan')}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                viewMode === 'plan' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              Plan
+            </button>
+          </div>
+        </div>
+
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
         >
           <Plus className="w-4 h-4" />
-          Add Task
+          {showForm ? 'Close Form' : 'Add Task'}
         </button>
       </div>
+
       {errorMsg && (
         <div className="mb-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
           {errorMsg}
         </div>
       )}
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4">
-          <input
-            type="text"
-            placeholder="Task title"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            required
-            className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <textarea
-            placeholder="Description (optional)"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={3}
-          />
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Priority</label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'low' | 'medium' | 'high' })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      <AnimatePresence mode="wait">
+        {showForm && (
+          <motion.form 
+            onSubmit={handleSubmit} 
+            className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <input
+              type="text"
+              placeholder="Task title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+              className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <textarea
+              placeholder="Description (optional)"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+            />
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Priority</label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'low' | 'medium' | 'high' })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'todo' | 'in_progress' | 'completed' })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date</label>
+                <input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'todo' | 'in_progress' | 'completed' })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                {editingTask ? 'Update Task' : 'Create Task'}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-4 py-2 bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600 text-gray-700 dark:text-gray-100 rounded-lg transition-colors"
               >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
+                Cancel
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date</label>
-              <input
-                type="date"
-                value={formData.due_date}
-                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              {editingTask ? 'Update Task' : 'Create Task'}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2 bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600 text-gray-700 dark:text-gray-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
+          </motion.form>
+        )}
+      </AnimatePresence>
 
       {loading ? (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading tasks...</div>
       ) : (
-        <div className="space-y-6">
-          {overdueTasks.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-red-600 mb-3">Overdue</h3>
-              <div className="space-y-2">
-                {overdueTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+        <AnimatePresence mode="wait">
+          {viewMode === 'plan' ? (
+            <motion.div
+              key="plan-view"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TaskPlan
+                tasks={planViewTasks}
+                onTaskUpdate={handleAgentTaskUpdate}
+                onTaskDelete={handleDelete}
+                onTaskEdit={handleAgentTaskEdit}
+                showActions={true}
+                emptyMessage="No tasks yet. Create your first task to get started!"
+                className="border-0 shadow-none bg-transparent dark:bg-transparent"
+              />
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="list-view"
+              className="space-y-6"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {overdueTasks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-red-600 mb-3">Overdue</h3>
+                  <div className="space-y-2">
+                    {overdueTasks.map(task => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggle={toggleStatus}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        getPriorityColor={getPriorityColor}
+                        getPriorityIcon={getPriorityIcon}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {todayTasks.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Today</h3>
-              <div className="space-y-2">
-                {todayTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+              {todayTasks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Today</h3>
+                  <div className="space-y-2">
+                    {todayTasks.map(task => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggle={toggleStatus}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        getPriorityColor={getPriorityColor}
+                        getPriorityIcon={getPriorityIcon}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {upcomingTasks.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Upcoming</h3>
-              <div className="space-y-2">
-                {upcomingTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+              {upcomingTasks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Upcoming</h3>
+                  <div className="space-y-2">
+                    {upcomingTasks.map(task => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggle={toggleStatus}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        getPriorityColor={getPriorityColor}
+                        getPriorityIcon={getPriorityIcon}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {noDateTasks.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">No Due Date</h3>
-              <div className="space-y-2">
-                {noDateTasks.map(task => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleStatus}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    getPriorityColor={getPriorityColor}
-                    getPriorityIcon={getPriorityIcon}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+              {noDateTasks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">No Due Date</h3>
+                  <div className="space-y-2">
+                    {noDateTasks.map(task => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggle={toggleStatus}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        getPriorityColor={getPriorityColor}
+                        getPriorityIcon={getPriorityIcon}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {tasks.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No tasks yet. Create your first task to get started!
-            </div>
+              {tasks.length === 0 && (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No tasks yet. Create your first task to get started!
+                </div>
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       )}
     </div>
   );
@@ -357,7 +529,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
 interface Comment {
   id: string;
   userId: string;
-  userName: string; // Mock, in real app would join users table
+  userName: string;
   content: string;
   timestamp: string;
 }
@@ -383,7 +555,6 @@ function TaskItem({
   const [commentCount, setCommentCount] = useState(0);
 
   useEffect(() => {
-     // Mock fetch comments from localStorage
      const stored = localStorage.getItem(`comments-${task.id}`);
      if (stored) {
          const parsed = JSON.parse(stored);
@@ -398,7 +569,7 @@ function TaskItem({
 
       const comment: Comment = {
           id: Date.now().toString(),
-          userId: 'current-user', // Mock
+          userId: 'current-user',
           userName: 'You',
           content: newComment,
           timestamp: new Date().toISOString()
@@ -412,16 +583,28 @@ function TaskItem({
   };
 
   return (
-    <div className={`p-4 border rounded-xl transition-all ${task.status === 'completed' ? 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700' : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-blue-300'}`}>
+    <motion.div 
+      className={`p-4 border rounded-xl transition-all ${task.status === 'completed' ? 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700' : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-blue-300'}`}
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.2 }}
+      layout
+    >
       <div className="flex items-start gap-3">
         <button
           onClick={() => onToggle(task)}
           className="mt-1 flex-shrink-0"
         >
           {task.status === 'completed' ? (
-            <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
+            <motion.div 
+              className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            >
               <CheckSquare className="w-4 h-4 text-white" />
-            </div>
+            </motion.div>
           ) : (
             <div className="w-5 h-5 border-2 border-gray-300 dark:border-neutral-700 rounded hover:border-blue-600 transition-colors" />
           )}
@@ -455,33 +638,41 @@ function TaskItem({
           </div>
 
           {/* Comments Section */}
-          {showComments && (
-              <div className="mt-4 pl-4 border-l-2 border-gray-100 dark:border-neutral-700 animate-in fade-in slide-in-from-top-2">
-                  <div className="space-y-3 mb-3">
-                      {comments.map(comment => (
-                          <div key={comment.id} className="text-sm">
-                              <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-gray-700 dark:text-gray-300">{comment.userName}</span>
-                                  <span className="text-xs text-gray-400">{new Date(comment.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                              </div>
-                              <p className="text-gray-600 dark:text-gray-400">{comment.content}</p>
-                          </div>
-                      ))}
-                  </div>
-                  <form onSubmit={handleAddComment} className="flex gap-2">
-                      <input 
-                          type="text" 
-                          placeholder="Write a comment..." 
-                          className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-900 dark:text-white focus:outline-none focus:border-blue-500"
-                          value={newComment}
-                          onChange={e => setNewComment(e.target.value)}
-                      />
-                      <button type="submit" disabled={!newComment.trim()} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg disabled:opacity-50">
-                          Post
-                      </button>
-                  </form>
-              </div>
-          )}
+          <AnimatePresence>
+            {showComments && (
+              <motion.div 
+                className="mt-4 pl-4 border-l-2 border-gray-100 dark:border-neutral-700"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="space-y-3 mb-3">
+                  {comments.map(comment => (
+                    <div key={comment.id} className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">{comment.userName}</span>
+                        <span className="text-xs text-gray-400">{new Date(comment.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      </div>
+                      <p className="text-gray-600 dark:text-gray-400">{comment.content}</p>
+                    </div>
+                  ))}
+                </div>
+                <form onSubmit={handleAddComment} className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Write a comment..." 
+                    className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-900 dark:text-white focus:outline-none focus:border-blue-500"
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                  />
+                  <button type="submit" disabled={!newComment.trim()} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg disabled:opacity-50">
+                    Post
+                  </button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -498,6 +689,6 @@ function TaskItem({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
