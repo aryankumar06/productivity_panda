@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TaskSection from './TaskSection';
 import HabitSection from './HabitSection';
 import EventSection from './EventSection';
-import { GlowingEffect } from './ui/GlowingEffect'; 
+import { GlowingEffect } from './ui/glowing-effect'; 
 import { ThemeToggle } from './ui/theme-toggle';
 import { RequestFeatureForm } from './RequestFeatureForm';
 import InboxView from './InboxView';
