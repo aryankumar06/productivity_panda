@@ -112,7 +112,6 @@ export default function WorkspaceView() {
     const { 
         role, 
         isManager, 
-        isEmployee, 
         isMember,
         canManageMembers,
         canInviteUsers,
@@ -504,9 +503,6 @@ export default function WorkspaceView() {
     // =========================================================================
 
     return (
-        <div className="min-h-[400px] md:h-[calc(100vh-180px)] flex flex-col md:flex-row gap-4 md:gap-6 animate-in fade-in">
-            {/* Sidebar: Workspace List */}
-            <div className="w-full md:w-64 flex-shrink-0 space-y-4">
         <div className="h-[calc(100vh-180px)] flex flex-col md:flex-row gap-6 animate-in fade-in">
             {/* Sidebar: Workspace List - Hidden on mobile when workspace is selected */}
             <div className={`w-full md:w-64 flex-shrink-0 space-y-4 ${activeWorkspaceId ? 'hidden md:block' : 'block'}`}>
@@ -566,12 +562,6 @@ export default function WorkspaceView() {
                 {activeWorkspace && isMember ? (
                     <>
                         {/* Header */}
-                        <div className="p-3 md:p-4 border-b border-gray-200 dark:border-neutral-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gray-50/50 dark:bg-neutral-800/50">
-                            <div>
-                                <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Layout className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
-                                    <span className="truncate">{activeWorkspace.name}</span>
-                                </h2>
                         <div className="p-4 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between bg-gray-50/50 dark:bg-neutral-800/50">
                             <div className="flex items-center gap-2">
                                 {/* Back button for mobile */}
@@ -587,30 +577,29 @@ export default function WorkspaceView() {
                                         <Layout className="w-5 h-5 text-gray-500" />
                                         {activeWorkspace.name}
                                     </h2>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                        isManager 
-                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
-                                            : 'bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-gray-300'
-                                    }`}>
-                                        {isManager ? '👑 Manager' : '👤 Employee'}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                        {members.length} member{members.length !== 1 ? 's' : ''}
-                                    </span>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                            isManager 
+                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
+                                                : 'bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-gray-300'
+                                        }`}>
+                                            {isManager ? '👑 Manager' : '👤 Employee'}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                            {members.length} member{members.length !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2 w-full md:w-auto">
                             </div>
                             <div className="flex items-center gap-2">
                                 {canInviteUsers && (
                                     <Button 
                                         size="sm"
                                         onClick={() => setShowInviteModal(true)}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 flex-1 md:flex-none text-xs md:text-sm"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
                                     >
-                                        <UserPlus className="w-3 h-3 md:w-4 md:h-4" />
-                                        <span className="md:inline">Invite</span>
+                                        <UserPlus className="w-4 h-4" />
+                                        <span className="hidden md:inline">Invite</span>
                                     </Button>
                                 )}
                                 {canCreateTasks && (
@@ -618,10 +607,10 @@ export default function WorkspaceView() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() => setShowTaskModal(true)}
-                                        className="gap-2 flex-1 md:flex-none text-xs md:text-sm"
+                                        className="gap-2"
                                     >
-                                        <Plus className="w-3 h-3 md:w-4 md:h-4" />
-                                        <span className="md:inline">Task</span>
+                                        <Plus className="w-4 h-4" />
+                                        <span className="hidden md:inline">Task</span>
                                     </Button>
                                 )}
                             </div>
@@ -671,7 +660,7 @@ export default function WorkspaceView() {
                                         value={[membersScrollPosition]}
                                         max={100}
                                         step={1}
-                                        onValueChange={(value) => {
+                                        onValueChange={(value: number[]) => {
                                             if (membersRef.current) {
                                                 const scrollWidth = membersRef.current.scrollWidth - membersRef.current.clientWidth;
                                                 membersRef.current.scrollLeft = (value[0] / 100) * scrollWidth;
@@ -684,38 +673,6 @@ export default function WorkspaceView() {
                             )}
                         </div>
 
-                        {/* Kanban Board */}
-                        <div className="flex-1 bg-gray-50/30 dark:bg-neutral-900/30 overflow-x-auto">
-                            <div className="flex gap-3 md:gap-4 p-3 md:p-4 h-full" style={{ minWidth: 'max-content' }}>
-                                {TASK_STATUSES.map(status => (
-                                    <div key={status.id} className="flex flex-col w-[220px] md:w-[260px] shrink-0 h-full rounded-xl bg-gray-100/50 dark:bg-neutral-800/50 p-2 md:p-3">
-                                        <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
-                                            <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm flex items-center gap-2">
-                                                <span className={`w-2 h-2 rounded-full ${
-                                                    status.id === 'done' ? 'bg-green-500' : 
-                                                    status.id === 'review' ? 'bg-purple-500' :
-                                                    status.id === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
-                                                }`} />
-                                                <span className="truncate">{status.label}</span>
-                                            </h3>
-                                            <span className="text-xs text-gray-400 font-mono bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded">
-                                                {getTasksByStatus(status.id).length}
-                                            </span>
-                                        </div>
-                                        
-                                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[100px]">
-                                            {getTasksByStatus(status.id).map(task => (
-                                                <TaskCard
-                                                    key={task.id}
-                                                    task={task}
-                                                    role={role}
-                                                    isManager={isManager}
-                                                    getMemberName={getMemberName}
-                                                    onUpdateStatus={handleUpdateTaskStatus}
-                                                    onDelete={handleDeleteTask}
-                                                />
-                                            ))}
-                                        </div>
                         {/* Kanban Board with Custom Slider */}
                         <div className="flex-1 flex flex-col bg-gray-50/30 dark:bg-neutral-900/30 overflow-hidden relative">
                             {/* Header Stats */}
@@ -808,7 +765,7 @@ export default function WorkspaceView() {
                                     value={[scrollPosition]}
                                     max={100}
                                     step={1}
-                                    onValueChange={(value) => {
+                                    onValueChange={(value: number[]) => {
                                         if (kanbanRef.current) {
                                             const scrollWidth = kanbanRef.current.scrollWidth - kanbanRef.current.clientWidth;
                                             kanbanRef.current.scrollLeft = (value[0] / 100) * scrollWidth;
