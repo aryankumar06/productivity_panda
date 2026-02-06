@@ -87,22 +87,22 @@ export default function Dashboard() {
         );
       case 'Tasks':
         return (
-          <div className="max-w-4xl mx-auto relative rounded-xl">
-            <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
+          <div className="max-w-4xl mx-auto relative rounded-xl overflow-hidden group">
+            <GlowingEffect spread={60} glow={true} proximity={80} inactiveZone={0.01} borderWidth={3} />
             <TaskSection selectedDate={selectedDate} />
           </div>
         );
       case 'Habits':
         return (
-          <div className="max-w-4xl mx-auto relative rounded-xl">
-            <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
+          <div className="max-w-4xl mx-auto relative rounded-xl overflow-hidden group">
+            <GlowingEffect spread={60} glow={true} proximity={80} inactiveZone={0.01} borderWidth={3} />
             <HabitSection selectedDate={selectedDate} />
           </div>
         );
       case 'Events':
         return (
-          <div className="max-w-4xl mx-auto relative rounded-xl">
-            <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
+          <div className="max-w-4xl mx-auto relative rounded-xl overflow-hidden group">
+            <GlowingEffect spread={60} glow={true} proximity={80} inactiveZone={0.01} borderWidth={3} />
             <EventSection selectedDate={selectedDate} />
           </div>
         );
