@@ -280,7 +280,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
   ]);
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
+    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6 h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <CheckSquare className="w-6 h-6 text-blue-600" />

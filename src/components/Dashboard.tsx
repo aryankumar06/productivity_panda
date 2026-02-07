@@ -50,12 +50,12 @@ export default function Dashboard() {
         return (
           <div className="flex flex-col gap-6">
             {/* Top Row: Tasks and Events Side by Side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="relative rounded-xl min-h-[500px]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <div className="relative rounded-xl h-full">
                 <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
                 <TaskSection selectedDate={selectedDate} />
               </div>
-              <div className="relative rounded-xl min-h-[500px]">
+              <div className="relative rounded-xl h-full">
                 <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
                 <EventSection selectedDate={selectedDate} />
               </div>

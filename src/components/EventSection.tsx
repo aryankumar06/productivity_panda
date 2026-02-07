@@ -125,7 +125,7 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
+    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6 h-full">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <Calendar className="w-6 h-6 text-blue-600" />
