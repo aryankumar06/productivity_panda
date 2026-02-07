@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  Filter, ArrowUpDown, Zap, Search, Maximize2, Settings, 
+  Filter, ArrowUpDown, Zap, Search, Maximize2, Settings, Minimize2,
   ChevronDown, Circle, Dumbbell, Brain, Moon, PenLine, 
   BookOpen, Plus, MoreHorizontal, FileText, Activity, Heart,
-  Check, Trash2, Edit2
+  Check, Trash2, Edit2, X
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays, isSameDay, parseISO, isWeekend } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Database } from '../lib/database.types';
 
@@ -26,6 +26,14 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  
+  // New State for Functionality
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'default' | 'name'>('default');
+  const [hideWeekends, setHideWeekends] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -37,7 +45,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
   // Calculate week dates based on selectedDate
   const dateObj = selectedDate ? parseISO(selectedDate) : new Date();
   const startDate = startOfWeek(dateObj, { weekStartsOn: 1 }); // Monday start
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
+  const weekDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(startDate, i)), [startDate]);
 
   const fetchHabits = useCallback(async () => {
     if (!user) return;
@@ -86,6 +94,38 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
     }
   };
 
+  // Quick Action: Complete all for today
+  const completeAllForToday = async () => {
+    const today = new Date();
+    const dateStr = format(today, 'yyyy-MM-dd');
+    if (!user) return;
+
+    const newCompletions: HabitCompletion[] = [];
+    
+    // Find habits not yet completed today
+    const habitsToComplete = habits.filter(h => !isCompleted(h.id, today));
+
+    if (habitsToComplete.length === 0) return; // All done
+
+    const insertPayload = habitsToComplete.map(h => {
+        const item = {
+            habit_id: h.id,
+            user_id: user.id,
+            completed_date: dateStr,
+            created_at: new Date().toISOString()
+        } as HabitCompletion;
+        newCompletions.push(item);
+        return {
+            habit_id: h.id,
+            user_id: user.id,
+            completed_date: dateStr
+        };
+    });
+
+    setCompletions(prev => [...prev, ...newCompletions]);
+    await supabase.from('habit_completions').insert(insertPayload);
+  };
+
   const calculateColumnTotal = (habitId: string) => {
     const weekDateStrings = weekDates.map(d => format(d, 'yyyy-MM-dd'));
     return completions.filter(c => c.habit_id === habitId && weekDateStrings.includes(c.completed_date)).length;
@@ -119,7 +159,6 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
     fetchHabits();
   };
 
-  // Helper to get icon based on name
   const getHabitIcon = (name: string) => {
     const n = name.toLowerCase();
     if (n.includes('workout')) return <Dumbbell className="w-3.5 h-3.5" />;
@@ -130,11 +169,22 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
     return <Zap className="w-3.5 h-3.5" />;
   };
 
+  // --- Computed Views ---
+  
+  const visibleDates = weekDates.filter(d => !hideWeekends || !isWeekend(d));
+
+  const visibleHabits = habits
+    .filter(h => h.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      if (sortOrder === 'name') return a.name.localeCompare(b.name);
+      return 0; // Default (created_at)
+    });
+
   return (
-    <div className="w-full bg-[#111111] dark:bg-[#111111] p-4 rounded-xl border border-[#222]">
-      <div className="bg-[#191919] rounded-lg border border-[#2a2a2a] shadow-2xl overflow-hidden">
+    <div className={`w-full bg-[#111111] dark:bg-[#111111] p-4 rounded-xl border border-[#222] transition-all duration-300 ${isMaximized ? 'fixed inset-0 z-50 h-screen overflow-auto' : ''}`}>
+      <div className="bg-[#191919] rounded-lg border border-[#2a2a2a] shadow-2xl overflow-hidden h-full flex flex-col">
         {/* Header Section */}
-        <div className="p-6 border-b border-[#2a2a2a]">
+        <div className="p-6 border-b border-[#2a2a2a] shrink-0">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -152,11 +202,77 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
             
             {/* Toolbar */}
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              {[Filter, ArrowUpDown, Zap, Search, Maximize2, Settings].map((Icon, idx) => (
-                <button key={idx} className="p-2 hover:bg-[#232323] rounded transition-colors" title="Filter (Demo)">
-                  <Icon className="w-4 h-4 text-gray-400" />
-                </button>
-              ))}
+               
+              <AnimatePresence>
+                {showSearch && (
+                  <motion.div 
+                    initial={{ width: 0, opacity: 0 }} 
+                    animate={{ width: 200, opacity: 1 }} 
+                    exit={{ width: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-center bg-[#232323] rounded-md border border-[#2a2a2a] px-2">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search habits..."
+                            className="bg-transparent border-none text-sm text-white focus:ring-0 w-full py-1.5 placeholder-gray-500"
+                            autoFocus
+                        />
+                        <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="text-gray-400 hover:text-white">
+                            <X className="w-3 h-3" />
+                        </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Filter / Sort / Actions */}
+              <button 
+                onClick={() => setHideWeekends(!hideWeekends)} 
+                className={`p-2 rounded transition-colors ${hideWeekends ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`} 
+                title={hideWeekends ? "Show Weekends" : "Hide Weekends"}
+              >
+                <Filter className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={() => setSortOrder(prev => prev === 'default' ? 'name' : 'default')}
+                className={`p-2 rounded transition-colors ${sortOrder === 'name' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
+                title="Sort by Name"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={completeAllForToday} 
+                className="p-2 hover:bg-[#232323] rounded transition-colors text-gray-400 hover:text-yellow-400" 
+                title="Complete All for Today"
+              >
+                <Zap className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={() => setShowSearch(true)} 
+                className={`p-2 rounded transition-colors ${showSearch ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
+                title="Search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={() => setIsMaximized(!isMaximized)} 
+                className={`p-2 rounded transition-colors ${isMaximized ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
+                title={isMaximized ? "Minimize" : "Maximize"}
+              >
+                {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+
+              <button className="p-2 hover:bg-[#232323] rounded transition-colors" title="Settings">
+                <Settings className="w-4 h-4 text-gray-400" />
+              </button>
+
               <div className="ml-2">
                 <Button 
                     onClick={() => setShowForm(true)}
@@ -175,7 +291,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
             {showForm && (
                 <motion.div 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                     onClick={() => resetForm()}
                 >
                     <motion.div 
@@ -208,32 +324,32 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
         </AnimatePresence>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full border-collapse">
             {/* Table Header */}
             <thead>
               <tr className="bg-[#1a1a1a] border-b border-[#2a2a2a]">
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] w-48 bg-[#1a1a1a] min-w-[200px]">
+                <th className="text-left px-6 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] w-48 bg-[#1a1a1a] min-w-[200px] sticky left-0 z-10">
                   <div className="flex items-center gap-2">
                     <Circle className="w-3.5 h-3.5" />
                     <span>Day</span>
                   </div>
                 </th>
-                {habits.map(habit => (
+                {visibleHabits.map(habit => (
                     <th key={habit.id} className="text-left px-6 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] min-w-[140px] group relative">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 {getHabitIcon(habit.name)}
                                 <span className="truncate max-w-[100px]" title={habit.name}>{habit.name}</span>
                             </div>
-                            <div className="opacity-0 group-hover:opacity-100 flex gap-1 absolute right-2 bg-[#1a1a1a] p-1 rounded-md shadow-sm">
+                            <div className="opacity-0 group-hover:opacity-100 flex gap-1 absolute right-2 bg-[#1a1a1a] p-1 rounded-md shadow-sm border border-[#333] z-20">
                                 <button onClick={() => { setEditingHabit(habit); setFormData({...habit}); setShowForm(true); }} className="hover:text-blue-400 p-1"><Edit2 className="w-3 h-3"/></button>
                                 <button onClick={() => deleteHabit(habit.id)} className="hover:text-red-400 p-1"><Trash2 className="w-3 h-3"/></button>
                             </div>
                         </div>
                     </th>
                 ))}
-                {habits.length === 0 && <th className="px-6 py-3 text-sm text-gray-600 italic border-r border-[#2a2a2a]">No habits yet</th>}
+                {visibleHabits.length === 0 && <th className="px-6 py-3 text-sm text-gray-600 italic border-r border-[#2a2a2a]">{searchQuery ? 'No matches' : 'No habits yet'}</th>}
                 <th className="text-center px-4 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] w-16">
                   <Plus className="w-4 h-4 mx-auto cursor-pointer hover:text-white" onClick={() => setShowForm(true)} />
                 </th>
@@ -245,18 +361,18 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
 
             {/* Table Body */}
             <tbody>
-              {weekDates.map((date) => {
+              {visibleDates.map((date) => {
                  const isToday = isSameDay(date, new Date());
                  const dayName = format(date, 'EEEE');
                  return (
                   <tr key={date.toISOString()} className={`border-b border-[#2a2a2a] hover:bg-[#1f1f1f] transition-colors group ${isToday ? 'bg-blue-900/10' : ''}`}>
-                    <td className={`px-6 py-4 border-r border-[#2a2a2a] border-l-4 ${isToday ? 'border-l-blue-500' : 'border-l-transparent'} bg-[#191919] group-hover:bg-[#1f1f1f]`}>
+                    <td className={`px-6 py-4 border-r border-[#2a2a2a] border-l-4 ${isToday ? 'border-l-blue-500' : 'border-l-transparent'} bg-[#191919] group-hover:bg-[#1f1f1f] sticky left-0 z-10`}>
                       <div className="flex items-center gap-3">
                         <FileText className={`w-4 h-4 ${isToday ? 'text-blue-500' : 'text-gray-500'}`} />
                         <span className={`font-medium ${isToday ? 'text-blue-400' : 'text-gray-300'}`}>{dayName}</span>
                       </div>
                     </td>
-                    {habits.map(habit => (
+                    {visibleHabits.map(habit => (
                         <td key={`${habit.id}-${date}`} className="px-6 py-4 border-r border-[#2a2a2a]">
                             <div className="flex justify-start">
                              <Checkbox 
@@ -267,7 +383,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                             </div>
                         </td>
                     ))}
-                    {habits.length === 0 && <td className="border-r border-[#2a2a2a]"></td>}
+                    {visibleHabits.length === 0 && <td className="border-r border-[#2a2a2a]"></td>}
                     <td className="px-4 py-4 border-r border-[#2a2a2a]"></td>
                     <td className="px-4 py-4"></td>
                   </tr>
@@ -278,15 +394,15 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
             {/* Table Footer */}
             <tfoot>
               <tr className="bg-[#1a1a1a]">
-                <td className="px-6 py-3 border-r border-[#2a2a2a] bg-[#1a1a1a]">
+                <td className="px-6 py-3 border-r border-[#2a2a2a] bg-[#1a1a1a] sticky left-0 z-10">
                   <span className="text-xs text-gray-500 font-medium">CHECKED {calculateTotalChecked()}</span>
                 </td>
-                {habits.map(habit => (
+                {visibleHabits.map(habit => (
                     <td key={`total-${habit.id}`} className="px-6 py-3 border-r border-[#2a2a2a] text-left">
                         <span className="text-xs text-gray-500">{calculateColumnTotal(habit.id)}</span>
                     </td>
                 ))}
-                 {habits.length === 0 && <td className="border-r border-[#2a2a2a]"></td>}
+                 {visibleHabits.length === 0 && <td className="border-r border-[#2a2a2a]"></td>}
                 <td className="px-4 py-3 border-r border-[#2a2a2a]"></td>
                 <td className="px-4 py-3"></td>
               </tr>
