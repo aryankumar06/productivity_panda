@@ -48,18 +48,21 @@ export default function Dashboard() {
     switch (activeTab) {
       case 'Dashboard':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="relative rounded-xl">
+          <div className="flex flex-col gap-6">
+            {/* Top Row: Tasks and Events Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="relative rounded-xl min-h-[500px]">
                 <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
                 <TaskSection selectedDate={selectedDate} />
               </div>
-              <div className="relative rounded-xl">
+              <div className="relative rounded-xl min-h-[500px]">
                 <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
                 <EventSection selectedDate={selectedDate} />
               </div>
             </div>
-            <div className="relative rounded-xl h-fit">
+
+            {/* Bottom Row: Habit Tracker 100% Width */}
+            <div className="relative rounded-xl w-full">
               <GlowingEffect spread={40} glow={true} proximity={64} inactiveZone={0.01} borderWidth={2} />
               <HabitSection selectedDate={selectedDate} />
             </div>
@@ -249,4 +252,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
