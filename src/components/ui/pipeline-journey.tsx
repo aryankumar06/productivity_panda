@@ -43,8 +43,8 @@ function PlaceholderCard({ opacity = 1 }: { opacity?: number }) {
         width: CARD_W,
         height: CARD_H,
         borderRadius: 12,
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "rgba(255,255,255,0.055)",
+        border: "1px solid rgba(255,255,255,0.1)",
         marginBottom: 12,
         padding: 14,
         display: "flex",
@@ -172,12 +172,55 @@ export function PipelineJourney({
       style={{
         position: "absolute",
         inset: 0,
-        background: "#09090b",
+        background: "radial-gradient(ellipse at 50% 40%, #0d1f12 0%, #09090b 65%)",
         fontFamily: FONT_FAMILY,
         color: "white",
         overflow: "hidden",
       }}
     >
+      {/* ── Animated green fog blobs ── */}
+      {/* Blob 1 — drifts in a slow elliptical path */}
+      <div
+        style={{
+          position: "absolute",
+          width: 600,
+          height: 400,
+          borderRadius: "50%",
+          background: `radial-gradient(ellipse, ${accentColor}22 0%, transparent 70%)`,
+          left: 200 + Math.sin(frame * 0.018) * 120,
+          top:  80  + Math.cos(frame * 0.013) * 80,
+          filter: "blur(60px)",
+          pointerEvents: "none",
+        }}
+      />
+      {/* Blob 2 — counter-drifts, slightly smaller and offset */}
+      <div
+        style={{
+          position: "absolute",
+          width: 440,
+          height: 320,
+          borderRadius: "50%",
+          background: `radial-gradient(ellipse, ${accentColor}18 0%, transparent 65%)`,
+          left: 580 + Math.cos(frame * 0.021) * 100,
+          top:  260 + Math.sin(frame * 0.016) * 60,
+          filter: "blur(50px)",
+          pointerEvents: "none",
+        }}
+      />
+      {/* Blob 3 — subtle, far right, slow pulse */}
+      <div
+        style={{
+          position: "absolute",
+          width: 320,
+          height: 260,
+          borderRadius: "50%",
+          background: `radial-gradient(ellipse, ${accentColor}14 0%, transparent 65%)`,
+          left: 900 + Math.sin(frame * 0.011 + 1.5) * 80,
+          top:  100 + Math.cos(frame * 0.019 + 0.8) * 50,
+          filter: "blur(45px)",
+          pointerEvents: "none",
+        }}
+      />
       {/* Grid bg */}
       <div
         style={{
@@ -244,9 +287,10 @@ export function PipelineJourney({
           width: CARD_W,
           height: CARD_H,
           borderRadius: 14,
-          background: "#18181b",
-          border: `1px solid ${accentColor}`,
-          boxShadow: `0 ${shadowBlur / 2}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}), 0 0 0 1px rgba(255,255,255,0.04) inset`,
+          background: "#141820",
+          border: `1px solid rgba(255,255,255,0.10)`,
+          borderLeft: `3px solid ${accentColor}`,
+          boxShadow: `0 ${shadowBlur / 2}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}), 0 0 ${shadowBlur}px ${accentColor}33`,
           transform: `rotate(${rotZ}deg) scale(${scaleBoost * landingScale})`,
           transformOrigin: "center center",
           padding: 16,
