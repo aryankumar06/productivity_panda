@@ -23,6 +23,8 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slider": "^1.3.6",
     "@radix-ui/react-slot": "^1.2.4",
+    "@react-three/fiber": "^8.18.0",
+    "@remotion/player": "^4.0.448",
     "@supabase/supabase-js": "^2.57.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -34,14 +36,18 @@
     "react": "^18.3.1",
     "react-day-picker": "^9.13.0",
     "react-dom": "^18.3.1",
+    "react-is": "^19.2.5",
     "recharts": "^3.6.0",
-    "tailwind-merge": "^3.4.0"
+    "remotion": "^4.0.448",
+    "tailwind-merge": "^3.4.0",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
     "@types/node": "^25.0.9",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
     "eslint": "^9.9.1",
