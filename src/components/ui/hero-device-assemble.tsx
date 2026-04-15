@@ -7,12 +7,14 @@ export interface HeroDeviceAssembleProps {
   accentColor?: string;
   speed?: number;
   className?: string;
+  theme?: 'light' | 'dark';
 }
 
 const FONT_FAMILY =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
-function MockUI({ accentColor }: { accentColor: string }) {
+function MockUI({ accentColor, theme }: { accentColor: string, theme: 'light' | 'dark' }) {
+  const isLight = theme === 'light';
   return (
     <div
       style={{
@@ -20,9 +22,9 @@ function MockUI({ accentColor }: { accentColor: string }) {
         inset: 0,
         display: "flex",
         flexDirection: "column",
-        background: "#0b0b0f",
+        background: isLight ? "#ffffff" : "#0b0b0f",
         fontFamily: FONT_FAMILY,
-        color: "white",
+        color: isLight ? "black" : "white",
         overflow: "hidden",
       }}
     >
@@ -30,8 +32,8 @@ function MockUI({ accentColor }: { accentColor: string }) {
       <div
         style={{
           height: "10%",
-          background: "#111118",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          background: isLight ? "#f1f5f9" : "#111118",
+          borderBottom: isLight ? "1px solid #e2e8f0" : "1px solid rgba(255,255,255,0.06)",
           display: "flex",
           alignItems: "center",
           padding: "0 16px",
@@ -91,6 +93,7 @@ export function HeroDeviceAssemble({
   speed = 1,
   className,
   screenContent,
+  theme = 'dark',
 }: HeroDeviceAssembleProps) {
   const frame = useCurrentFrame() * speed;
   const { fps } = useVideoConfig();
@@ -141,7 +144,9 @@ export function HeroDeviceAssemble({
         position: "absolute",
         inset: 0,
         overflow: "hidden",
-        background: "radial-gradient(ellipse at center, #1a1a22 0%, #050507 70%)",
+        background: theme === 'light' 
+          ? "radial-gradient(ellipse at center, #f8fafc 0%, #f1f5f9 70%)" 
+          : "radial-gradient(ellipse at center, #1a1a22 0%, #050507 70%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -165,10 +170,12 @@ export function HeroDeviceAssemble({
             position: "absolute",
             inset: 0,
             transform: `translateZ(${lidZ - 8}px)`,
-            background: "linear-gradient(180deg, #1f2128 0%, #0e1014 100%)",
+            background: theme === 'light' ? "linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%)" : "linear-gradient(180deg, #1f2128 0%, #0e1014 100%)",
             borderRadius: bezelRadius + 4,
-            border: "1px solid rgba(255,255,255,0.08)",
-            boxShadow: "0 60px 120px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)",
+            border: theme === 'light' ? "1px solid #94a3b8" : "1px solid rgba(255,255,255,0.08)",
+            boxShadow: theme === 'light' 
+              ? "0 30px 60px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.8)"
+              : "0 60px 120px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)",
             opacity: layerOpacity,
           }}
         />
@@ -184,10 +191,10 @@ export function HeroDeviceAssemble({
               height: 28,
               transform: `translateZ(${baseZ}px) rotateX(78deg)`,
               transformOrigin: "top center",
-              background: "linear-gradient(180deg, #2a2d36 0%, #14161c 100%)",
+              background: theme === 'light' ? "linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%)" : "linear-gradient(180deg, #2a2d36 0%, #14161c 100%)",
               borderRadius: "0 0 12px 12px",
-              border: "1px solid rgba(255,255,255,0.06)",
-              boxShadow: "0 30px 60px rgba(0,0,0,0.6)",
+              border: theme === 'light' ? "1px solid #94a3b8" : "1px solid rgba(255,255,255,0.06)",
+              boxShadow: theme === 'light' ? "0 20px 40px rgba(0,0,0,0.15)" : "0 30px 60px rgba(0,0,0,0.6)",
               opacity: layerOpacity,
             }}
           />
@@ -199,10 +206,12 @@ export function HeroDeviceAssemble({
             position: "absolute",
             inset: 0,
             transform: `translateZ(${bezelZ}px)`,
-            background: "#0a0a0d",
+            background: theme === 'light' ? "#0f172a" : "#0a0a0d",
             borderRadius: bezelRadius,
-            border: "1px solid rgba(255,255,255,0.12)",
-            boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.5)",
+            border: theme === 'light' ? "1px solid #334155" : "1px solid rgba(255,255,255,0.12)",
+            boxShadow: theme === 'light' 
+              ? "inset 0 0 0 2px rgba(255,255,255,0.1), 0 20px 60px rgba(0,0,0,0.2)"
+              : "inset 0 0 0 2px rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.5)",
             opacity: layerOpacity,
           }}
         />
@@ -229,8 +238,8 @@ export function HeroDeviceAssemble({
             }}
           />
           {/* Screen content fades in after wake */}
-          <div style={{ position: "absolute", inset: 0, opacity: screenWake }}>
-            {screenContent ?? <MockUI accentColor={accentColor} />}
+          <div style={{ position: "absolute", inset: 0, opacity: screenWake, background: theme === 'light' ? '#fff' : '#000' }}>
+            {screenContent ?? <MockUI accentColor={accentColor} theme={theme} />}
           </div>
           {/* Shimmer sweep */}
           <div

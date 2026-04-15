@@ -10,8 +10,7 @@ import { RequestFeatureForm } from "./RequestFeatureForm";
 function LandingPage() {
   const { theme, toggleTheme } = useTheme();
 
-  // LandingScene has no external props; memoised empty object avoids re-renders
-  const playerProps = useMemo(() => ({}), []);
+  const playerProps = useMemo(() => ({ theme }), [theme]);
 
   const features = [
     {
@@ -41,7 +40,7 @@ function LandingPage() {
   ];
 
   return (
-    <div className="bg-neutral-950 min-h-screen relative text-white">
+    <div className="bg-neutral-50 dark:bg-neutral-950 min-h-screen relative text-neutral-900 dark:text-white transition-colors duration-300">
       {/* ── Top bar ── */}
       <div className="absolute top-0 right-0 p-6 z-20">
         <RequestFeatureForm
@@ -77,30 +76,30 @@ function LandingPage() {
           transition={{ duration: 0.7 }}
           className="text-center space-y-4 mb-10 relative z-10"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-white/60 mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-200/50 dark:bg-white/5 border border-neutral-300 dark:border-white/10 text-xs text-neutral-600 dark:text-white/60 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
             Shipped · Now in production
           </div>
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05]">
             Productivity{" "}
-            <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">
               Hub
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-white/50 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-neutral-600 dark:text-white/50 max-w-xl mx-auto leading-relaxed">
             Your all-in-one workspace for tasks, habits, and progress — designed
             to keep you in flow.
           </p>
           <div className="flex flex-wrap gap-3 justify-center pt-2">
             <a
               href="/signup"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black font-semibold hover:bg-white/90 transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-black font-semibold hover:bg-neutral-800 dark:hover:bg-white/90 transition-all hover:scale-105"
             >
               Get started free <ArrowRight className="w-4 h-4" />
             </a>
             <a
               href="/login"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/15 text-white/80 hover:bg-white/5 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-neutral-300 dark:border-white/15 text-neutral-600 dark:text-white/80 hover:bg-neutral-100 dark:hover:bg-white/5 transition-all"
             >
               Sign in
             </a>
@@ -132,9 +131,10 @@ function LandingPage() {
               aspectRatio: "16 / 9",
               borderRadius: 20,
               overflow: "hidden",
-              background: "#050505",
-              boxShadow:
-                "0 0 0 1px rgba(255,255,255,0.06), 0 40px 120px rgba(0,0,0,0.6), 0 0 80px rgba(34,197,94,0.08)",
+              background: theme === 'dark' ? "#050505" : "#ffffff",
+              boxShadow: theme === 'dark'
+                ? "0 0 0 1px rgba(255,255,255,0.06), 0 40px 120px rgba(0,0,0,0.6), 0 0 80px rgba(34,197,94,0.08)"
+                : "0 0 0 1px rgba(0,0,0,0.06), 0 40px 120px rgba(0,0,0,0.1), 0 0 80px rgba(34,197,94,0.15)",
             }}
           />
           {/* Reflection shimmer */}
@@ -151,10 +151,10 @@ function LandingPage() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-neutral-900 dark:text-white">
             Why Choose Productivity Hub?
           </h2>
-          <p className="text-white/40 max-w-2xl mx-auto">
+          <p className="text-neutral-600 dark:text-white/40 max-w-2xl mx-auto">
             Designed to help you focus, organize, and achieve your goals with a
             suite of powerful tools.
           </p>
@@ -168,52 +168,52 @@ function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
               viewport={{ once: true }}
-              className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/10 p-6 rounded-2xl transition-all duration-300 group"
+              className="bg-white dark:bg-white/[0.03] hover:bg-neutral-50 dark:hover:bg-white/[0.06] border border-neutral-200 dark:border-white/[0.06] hover:border-neutral-300 dark:hover:border-white/10 p-6 rounded-2xl transition-all duration-300 group shadow-sm dark:shadow-none"
             >
-              <div className="mb-4 p-3 bg-white/5 rounded-xl inline-block group-hover:scale-110 transition-transform duration-300">
+              <div className="mb-4 p-3 bg-neutral-100 dark:bg-white/5 rounded-xl inline-block group-hover:scale-110 transition-transform duration-300">
                 {feature.icon}
               </div>
-              <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-              <p className="text-white/40 text-sm leading-relaxed">{feature.description}</p>
+              <h3 className="text-lg font-semibold mb-2 text-neutral-900 dark:text-white">{feature.title}</h3>
+              <p className="text-neutral-600 dark:text-white/40 text-sm leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-white/[0.06] py-12">
+      <footer className="border-t border-neutral-200 dark:border-white/[0.06] py-12">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div>
-              <h3 className="text-lg font-bold text-white mb-2">Productivity Hub</h3>
-              <p className="text-sm text-white/40 mb-1">An EliteX Solutions Product</p>
-              <p className="text-sm text-white/40">
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Productivity Hub</h3>
+              <p className="text-sm text-neutral-600 dark:text-white/40 mb-1">An EliteX Solutions Product</p>
+              <p className="text-sm text-neutral-600 dark:text-white/40">
                 Empowering you to achieve more, every single day.
               </p>
             </div>
             <div className="md:text-right">
-              <h3 className="text-lg font-bold text-white mb-2">Meet the developer —</h3>
-              <p className="text-sm text-white/60 font-medium mb-1">Aryan Kumar</p>
-              <div className="flex flex-wrap justify-start md:justify-end gap-4 text-sm text-white/40 mb-2">
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Meet the developer —</h3>
+              <p className="text-sm text-neutral-700 dark:text-white/60 font-medium mb-1">Aryan Kumar</p>
+              <div className="flex flex-wrap justify-start md:justify-end gap-4 text-sm text-neutral-500 dark:text-white/40 mb-2">
                 <a href="https://linkedin.com/in/aryankumar" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">LinkedIn</a>
                 <a href="https://twitter.com/aryankumar" target="_blank" rel="noopener noreferrer" className="hover:text-sky-400 transition-colors">Twitter</a>
                 <a href="https://instagram.com/aryankumar" target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 transition-colors">Instagram</a>
                 <a href="https://www.producthunt.com/posts/productivity-hub" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">Product Hunt</a>
               </div>
-              <div className="text-sm text-white/40 space-y-1">
-                <p>Contact: <a href="tel:9310479532" className="hover:text-white transition-colors">+91 9310479532</a></p>
-                <p>Email: <a href="mailto:team@elitexsolutions.xyz" className="hover:text-white transition-colors">team@elitexsolutions.xyz</a></p>
+              <div className="text-sm text-neutral-500 dark:text-white/40 space-y-1">
+                <p>Contact: <a href="tel:9310479532" className="text-neutral-700 hover:text-neutral-900 dark:hover:text-white transition-colors">+91 9310479532</a></p>
+                <p>Email: <a href="mailto:team@elitexsolutions.xyz" className="text-neutral-700 hover:text-neutral-900 dark:hover:text-white transition-colors">team@elitexsolutions.xyz</a></p>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-white/[0.06] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/30 text-sm">
+          <div className="border-t border-neutral-200 dark:border-white/[0.06] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-neutral-500 dark:text-white/30 text-sm">
               © {new Date().getFullYear()} EliteX Solutions. All rights reserved.
             </p>
-            <div className="flex gap-6 text-sm text-white/40">
-              <a href="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</a>
-              <a href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a>
+            <div className="flex gap-6 text-sm text-neutral-500 dark:text-white/40">
+              <a href="/terms-of-service" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Terms of Service</a>
+              <a href="/privacy-policy" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Privacy Policy</a>
             </div>
           </div>
         </div>

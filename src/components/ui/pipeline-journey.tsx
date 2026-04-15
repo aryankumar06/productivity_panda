@@ -5,6 +5,7 @@ export interface PipelineJourneyProps {
   accentColor?: string;
   speed?: number;
   className?: string;
+  theme?: 'light' | 'dark';
 }
 
 const FONT_FAMILY =
@@ -36,15 +37,15 @@ function pseudoRandom(i: number) {
   return v - Math.floor(v);
 }
 
-function PlaceholderCard({ opacity = 1 }: { opacity?: number }) {
+function PlaceholderCard({ opacity = 1, isLight }: { opacity?: number; isLight: boolean }) {
   return (
     <div
       style={{
         width: CARD_W,
         height: CARD_H,
         borderRadius: 12,
-        background: "rgba(255,255,255,0.055)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.055)",
+        border: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.1)",
         marginBottom: 12,
         padding: 14,
         display: "flex",
@@ -53,10 +54,10 @@ function PlaceholderCard({ opacity = 1 }: { opacity?: number }) {
         opacity,
       }}
     >
-      <div style={{ width: "70%", height: 10, borderRadius: 4, background: "rgba(255,255,255,0.12)" }} />
-      <div style={{ width: "45%", height: 8, borderRadius: 4, background: "rgba(255,255,255,0.08)" }} />
+      <div style={{ width: "70%", height: 10, borderRadius: 4, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)" }} />
+      <div style={{ width: "45%", height: 8, borderRadius: 4, background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)" }} />
       <div style={{ flex: 1 }} />
-      <div style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(255,255,255,0.12)" }} />
+      <div style={{ width: 28, height: 28, borderRadius: 999, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)" }} />
     </div>
   );
 }
@@ -66,7 +67,9 @@ export function PipelineJourney({
   accentColor = "#22c55e",
   speed = 1,
   className,
+  theme = 'dark',
 }: PipelineJourneyProps) {
+  const isLight = theme === 'light';
   const frame = useCurrentFrame() * speed;
   const { fps } = useVideoConfig();
 
@@ -172,9 +175,11 @@ export function PipelineJourney({
       style={{
         position: "absolute",
         inset: 0,
-        background: "radial-gradient(ellipse at 50% 40%, #0d1f12 0%, #09090b 65%)",
+        background: isLight 
+          ? "radial-gradient(ellipse at 50% 40%, #e2e8f0 0%, #f8fafc 65%)" 
+          : "radial-gradient(ellipse at 50% 40%, #0d1f12 0%, #09090b 65%)",
         fontFamily: FONT_FAMILY,
-        color: "white",
+        color: isLight ? "#0f172a" : "white",
         overflow: "hidden",
       }}
     >
@@ -226,8 +231,9 @@ export function PipelineJourney({
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+          backgroundImage: isLight 
+            ? "linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)"
+            : "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
@@ -260,19 +266,20 @@ export function PipelineJourney({
               width: COL_WIDTH,
               height: 480,
               borderRadius: 16,
-              background: `rgba(255,255,255,${0.02 + flash * 0.08})`,
-              border: `1px solid rgba(255,255,255,${0.06 + flash * 0.2})`,
+              background: isLight ? `rgba(255,255,255,${0.6 + flash * 0.4})` : `rgba(255,255,255,${0.02 + flash * 0.08})`,
+              border: isLight ? `1px solid rgba(0,0,0,${0.08 + flash * 0.2})` : `1px solid rgba(255,255,255,${0.06 + flash * 0.2})`,
               padding: 20,
+              boxShadow: isLight ? "0 4px 20px rgba(0,0,0,0.02)" : "none",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <div style={{ fontSize: 14, fontWeight: 600, opacity: 0.85 }}>{col.title}</div>
-              <div style={{ fontSize: 12, fontFamily: MONO_FAMILY, opacity: 0.5, padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,0.06)" }}>
+              <div style={{ fontSize: 12, fontFamily: MONO_FAMILY, opacity: 0.5, padding: "2px 8px", borderRadius: 999, background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)" }}>
                 {col.count}
               </div>
             </div>
             {Array.from({ length: col.count }).map((_, k) => (
-              <PlaceholderCard key={k} opacity={0.55 + ((k * 13) % 30) / 100} />
+              <PlaceholderCard key={k} opacity={0.55 + ((k * 13) % 30) / 100} isLight={isLight} />
             ))}
           </div>
         );
@@ -287,10 +294,12 @@ export function PipelineJourney({
           width: CARD_W,
           height: CARD_H,
           borderRadius: 14,
-          background: "#141820",
-          border: `1px solid rgba(255,255,255,0.10)`,
+          background: isLight ? "#ffffff" : "#141820",
+          border: isLight ? `1px solid rgba(0,0,0,0.1)` : `1px solid rgba(255,255,255,0.10)`,
           borderLeft: `3px solid ${accentColor}`,
-          boxShadow: `0 ${shadowBlur / 2}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}), 0 0 ${shadowBlur}px ${accentColor}33`,
+          boxShadow: isLight
+            ? `0 ${shadowBlur / 2}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha * 0.4}), 0 0 ${shadowBlur}px ${accentColor}11`
+            : `0 ${shadowBlur / 2}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}), 0 0 ${shadowBlur}px ${accentColor}33`,
           transform: `rotate(${rotZ}deg) scale(${scaleBoost * landingScale})`,
           transformOrigin: "center center",
           padding: 16,

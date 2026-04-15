@@ -19,8 +19,8 @@ const SCALE_Y    = SCREEN_H / PIPELINE_H;   // ≈ 0.603
 // Use the smaller axis so the board never overflows
 const SCALE = Math.min(SCALE_X, SCALE_Y);   // 0.566
 
-const ScaledSprintBoard = () => (
-  <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: "#09090b" }}>
+const ScaledSprintBoard = ({ theme }: { theme: 'light' | 'dark' }) => (
+  <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: theme === 'dark' ? "#09090b" : "#ffffff" }}>
     {/* Fixed-size inner box scaled from top-left to exactly fill the screen */}
     <div
       style={{
@@ -34,6 +34,7 @@ const ScaledSprintBoard = () => (
       }}
     >
       <PipelineJourney
+        theme={theme}
         cardLabel="Build pipeline"
         accentColor="#22c55e"
         speed={1}
@@ -49,14 +50,15 @@ const ScaledSprintBoard = () => (
  * Frame  ~63        : Screen wakes (shimmer sweep)
  * Frames ~63 – 360 : Sprint board plays INSIDE the laptop display, all 3 columns visible
  */
-export function LandingScene() {
+export function LandingScene({ theme }: { theme: 'light' | 'dark' }) {
   return (
     <HeroDeviceAssemble
+      theme={theme}
       assembleStart={0}
       device="laptop"
       accentColor="#22c55e"
       speed={1}
-      screenContent={<ScaledSprintBoard />}
+      screenContent={<ScaledSprintBoard theme={theme} />}
     />
   );
 }
