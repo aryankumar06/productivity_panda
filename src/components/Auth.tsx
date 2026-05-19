@@ -3,8 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { AtSignIcon, ChevronLeftIcon, KeyRound, Grid2X2, Apple, Github } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { FloatingPaths, GoogleIcon } from './ui/auth-helpers';
+import { GoogleIcon } from './ui/auth-helpers';
 import { supabase } from '../lib/supabase';
+import { CanvasRevealEffect } from './ui/sign-in-flow-1';
 
 type AuthMode = 'signin' | 'signup' | 'magic-link' | 'forgot-password' | 'reset-password';
 type UserType = 'student' | 'creator' | 'professional';
@@ -245,14 +246,26 @@ export default function Auth() {
 
   return (
     <main className="relative min-h-screen md:overflow-hidden lg:grid lg:grid-cols-2 bg-black">
-      {/* Left Panel - Hidden on mobile, Animated paths */}
-      <div className="bg-muted/60 relative hidden h-screen flex-col border-r border-gray-800 p-10 lg:flex">
-        <div className="from-background absolute inset-0 z-10 bg-gradient-to-t to-transparent" />
-        <div className="z-10 flex items-center gap-2">
+      {/* Left Panel - Hidden on mobile, Canvas Reveal Effect */}
+      <div className="relative hidden h-screen flex-col border-r border-gray-800 p-10 lg:flex overflow-hidden">
+        {/* Canvas background */}
+        <div className="absolute inset-0">
+          <CanvasRevealEffect
+            animationSpeed={3}
+            containerClassName="bg-black"
+            colors={[[255, 255, 255], [200, 200, 255]]}
+            dotSize={4}
+            showGradient={false}
+          />
+          {/* Dark overlay so text stays readable */}
+          <div className="absolute inset-0 bg-black/60" />
+        </div>
+        {/* Content above canvas */}
+        <div className="relative z-10 flex items-center gap-2">
           <Grid2X2 className="size-6 text-white" />
           <p className="text-xl font-semibold text-white">Productivity Hub</p>
         </div>
-        <div className="z-10 mt-auto">
+        <div className="relative z-10 mt-auto">
           <blockquote className="space-y-2">
             <p className="text-xl text-white">
               &ldquo;This platform has helped me to save time and organize my tasks better than ever before.&rdquo;
@@ -261,10 +274,6 @@ export default function Auth() {
               ~ Productivity Hub User
             </footer>
           </blockquote>
-        </div>
-        <div className="absolute inset-0">
-          <FloatingPaths position={1} />
-          <FloatingPaths position={-1} />
         </div>
       </div>
 

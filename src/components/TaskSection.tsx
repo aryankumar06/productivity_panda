@@ -13,8 +13,8 @@ interface AgentTask {
   id: string;
   title: string;
   description: string;
-  status: 'completed' | 'in-progress' | 'pending' | 'need-help' | 'failed';
-  priority: 'low' | 'medium' | 'high';
+  status: string;
+  priority: string;
   level: number;
   dependencies: string[];
   subtasks: any[];
@@ -280,7 +280,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
   ]);
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
+    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6 h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <CheckSquare className="w-6 h-6 text-blue-600" />
@@ -610,10 +610,19 @@ function TaskItem({
             <div className="w-5 h-5 border-2 border-gray-300 dark:border-neutral-700 rounded hover:border-blue-600 transition-colors" />
           )}
         </button>
+        <div className="mt-1 flex-shrink-0 relative">
+          <input
+            type="checkbox"
+            checked={task.status === 'completed'}
+            onChange={() => onToggle(task)}
+            className="animated-checkbox"
+            id={`task-${task.id}`}
+          />
+        </div>
         <div className="flex-1 min-w-0">
-          <h4 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+          <label htmlFor={`task-${task.id}`} className={`font-medium cursor-pointer ${task.status === 'completed' ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
             {task.title}
-          </h4>
+          </label>
           {task.description && (
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{task.description}</p>
           )}

@@ -1,7 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Target, Flame, Check, Trash2, Edit2 } from 'lucide-react';
+import { 
+  Filter, ArrowUpDown, Zap, Search, Maximize2, Settings, Minimize2,
+  ChevronDown, Circle, Dumbbell, Brain, Moon, PenLine, 
+  BookOpen, Plus, MoreHorizontal, FileText, Activity, Heart,
+  Check, Trash2, Edit2, X
+} from 'lucide-react';
+import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
+import { format, startOfWeek, addDays, isSameDay, parseISO, isWeekend } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Database } from '../lib/database.types';
 
 type Habit = Database['public']['Tables']['habits']['Row'];
@@ -11,18 +20,20 @@ interface HabitSectionProps {
   selectedDate: string;
 }
 
-interface HabitWithStats extends Habit {
-  completions: HabitCompletion[];
-  currentStreak: number;
-  isCompletedToday: boolean;
-}
-
 export default function HabitSection({ selectedDate }: HabitSectionProps) {
   const { user } = useAuth();
-  const [habits, setHabits] = useState<HabitWithStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  
+  // New State for Functionality
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'default' | 'name'>('default');
+  const [hideWeekends, setHideWeekends] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -31,339 +42,374 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
     color: '#3b82f6'
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchHabits();
-    }
+  // Calculate week dates based on selectedDate
+  const dateObj = selectedDate ? parseISO(selectedDate) : new Date();
+  const startDate = startOfWeek(dateObj, { weekStartsOn: 1 }); // Monday start
+  const weekDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(startDate, i)), [startDate]);
 
-    const handleOpenModal = () => setShowForm(true);
-    window.addEventListener('open-habit-modal', handleOpenModal);
-    return () => window.removeEventListener('open-habit-modal', handleOpenModal);
-  }, [user, selectedDate]);
+  const fetchHabits = useCallback(async () => {
+    if (!user) return;
 
-  const fetchHabits = async () => {
-    setLoading(true);
-
-    const { data: habitsDataRaw, error: habitsError } = await supabase
+    const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
-      .eq('user_id', user!.id)
-      .order('created_at', { ascending: false });
-    const habitsData = habitsDataRaw as Habit[] | null;
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
 
-    if (habitsError || !habitsData) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: completionsDataRaw } = await supabase
+    const { data: completionsData } = await supabase
       .from('habit_completions')
       .select('*')
-      .eq('user_id', user!.id)
-      .order('completed_date', { ascending: false });
-    const completionsData = completionsDataRaw as HabitCompletion[] | null;
+      .eq('user_id', user.id);
 
-    const habitsWithStats = habitsData.map(habit => {
-      const habitCompletions = (completionsData || []).filter(c => c.habit_id === habit.id);
-      const currentStreak = calculateStreak(habitCompletions, selectedDate);
-      const isCompletedToday = habitCompletions.some(c => c.completed_date === selectedDate);
+    setHabits(habitsData || []);
+    setCompletions(completionsData || []);
+  }, [user]);
 
-      return {
-        ...habit,
-        completions: habitCompletions,
-        currentStreak,
-        isCompletedToday
-      };
-    });
+  useEffect(() => {
+    fetchHabits();
+  }, [fetchHabits, selectedDate]);
 
-    setHabits(habitsWithStats);
-    setLoading(false);
+  const isCompleted = (habitId: string, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return completions.some(c => c.habit_id === habitId && c.completed_date === dateStr);
   };
 
-  const calculateStreak = (completions: HabitCompletion[], currentDate: string): number => {
-    if (completions.length === 0) return 0;
+  const toggleCompletion = async (habitId: string, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const completed = isCompleted(habitId, date);
 
-    const sortedDates = completions
-      .map(c => c.completed_date)
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-
-    let streak = 0;
-    const checkDate = new Date(currentDate + 'T00:00:00');
-
-    for (const dateStr of sortedDates) {
-      const completionDate = new Date(dateStr + 'T00:00:00');
-      const daysDiff = Math.floor((checkDate.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (daysDiff === 0) {
-        streak++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else if (daysDiff === 1) {
-        streak++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else {
-        break;
-      }
+    // Optimistic UI Update
+    if (completed) {
+      setCompletions(prev => prev.filter(c => !(c.habit_id === habitId && c.completed_date === dateStr)));
+      await supabase.from('habit_completions').delete().eq('habit_id', habitId).eq('completed_date', dateStr);
+    } else {
+      const newCompletion = {
+        habit_id: habitId,
+        user_id: user!.id,
+        completed_date: dateStr,
+        created_at: new Date().toISOString()
+      } as HabitCompletion;
+      setCompletions(prev => [...prev, newCompletion]);
+      await supabase.from('habit_completions').insert([{ habit_id: habitId, user_id: user!.id, completed_date: dateStr }]);
     }
+  };
 
-    return streak;
+  // Quick Action: Complete all for today
+  const completeAllForToday = async () => {
+    const today = new Date();
+    const dateStr = format(today, 'yyyy-MM-dd');
+    if (!user) return;
+
+    const newCompletions: HabitCompletion[] = [];
+    
+    // Find habits not yet completed today
+    const habitsToComplete = habits.filter(h => !isCompleted(h.id, today));
+
+    if (habitsToComplete.length === 0) return; // All done
+
+    const insertPayload = habitsToComplete.map(h => {
+        const item = {
+            habit_id: h.id,
+            user_id: user.id,
+            completed_date: dateStr,
+            created_at: new Date().toISOString()
+        } as HabitCompletion;
+        newCompletions.push(item);
+        return {
+            habit_id: h.id,
+            user_id: user.id,
+            completed_date: dateStr
+        };
+    });
+
+    setCompletions(prev => [...prev, ...newCompletions]);
+    await supabase.from('habit_completions').insert(insertPayload);
+  };
+
+  const calculateColumnTotal = (habitId: string) => {
+    const weekDateStrings = weekDates.map(d => format(d, 'yyyy-MM-dd'));
+    return completions.filter(c => c.habit_id === habitId && weekDateStrings.includes(c.completed_date)).length;
+  };
+
+  const calculateTotalChecked = () => {
+    const weekDateStrings = weekDates.map(d => format(d, 'yyyy-MM-dd'));
+    return completions.filter(c => weekDateStrings.includes(c.completed_date)).length;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (editingHabit) {
-      const { error } = await supabase
-        .from('habits')
-        .update({
-          ...formData,
-          updated_at: new Date().toISOString()
-        } as Database['public']['Tables']['habits']['Update'])
-        .eq('id', editingHabit.id);
-
-      if (!error) {
-        await fetchHabits();
-        resetForm();
-      }
+      await supabase.from('habits').update({ ...formData }).eq('id', editingHabit.id);
     } else {
-      const { error } = await supabase
-        .from('habits')
-        .insert([{
-          ...formData,
-          user_id: user!.id
-        } as Database['public']['Tables']['habits']['Insert']]);
-
-      if (!error) {
-        await fetchHabits();
-        resetForm();
-      }
+      await supabase.from('habits').insert([{ ...formData, user_id: user!.id }]);
     }
+    fetchHabits();
+    resetForm();
   };
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      frequency: 'daily',
-      target_days: 7,
-      color: '#3b82f6'
-    });
+    setFormData({ name: '', description: '', frequency: 'daily', target_days: 7, color: '#3b82f6' });
     setEditingHabit(null);
     setShowForm(false);
   };
 
-  const handleEdit = (habit: Habit) => {
-    setEditingHabit(habit);
-    setFormData({
-      name: habit.name,
-      description: habit.description,
-      frequency: habit.frequency,
-      target_days: habit.target_days,
-      color: habit.color
+  const deleteHabit = async (id: string) => {
+    if (!confirm('Delete habit?')) return;
+    await supabase.from('habits').delete().eq('id', id);
+    fetchHabits();
+  };
+
+  const getHabitIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('workout')) return <Dumbbell className="w-3.5 h-3.5" />;
+    if (n.includes('meditate')) return <Brain className="w-3.5 h-3.5" />;
+    if (n.includes('sleep')) return <Moon className="w-3.5 h-3.5" />;
+    if (n.includes('journal')) return <PenLine className="w-3.5 h-3.5" />;
+    if (n.includes('study')) return <BookOpen className="w-3.5 h-3.5" />;
+    return <Zap className="w-3.5 h-3.5" />;
+  };
+
+  // --- Computed Views ---
+  
+  const visibleDates = weekDates.filter(d => !hideWeekends || !isWeekend(d));
+
+  const visibleHabits = habits
+    .filter(h => h.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      if (sortOrder === 'name') return a.name.localeCompare(b.name);
+      return 0; // Default (created_at)
     });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase
-      .from('habits')
-      .delete()
-      .eq('id', id);
-
-    if (!error) {
-      await fetchHabits();
-    }
-  };
-
-  const toggleCompletion = async (habit: HabitWithStats) => {
-    if (habit.isCompletedToday) {
-      const { error } = await supabase
-        .from('habit_completions')
-        .delete()
-        .eq('habit_id', habit.id)
-        .eq('completed_date', selectedDate);
-
-      if (!error) {
-        await fetchHabits();
-      }
-    } else {
-      const { error } = await supabase
-        .from('habit_completions')
-        .insert([{
-          habit_id: habit.id,
-          user_id: user!.id,
-          completed_date: selectedDate
-        } as Database['public']['Tables']['habit_completions']['Insert']]);
-
-      if (!error) {
-        await fetchHabits();
-      }
-    }
-  };
-
-  const getWeekProgress = (habit: HabitWithStats) => {
-    const weekStart = new Date(selectedDate + 'T00:00:00');
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-
-    const weekDates = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(weekStart);
-      date.setDate(date.getDate() + i);
-      return date.toISOString().split('T')[0];
-    });
-
-    return weekDates.map(date => ({
-      date,
-      completed: habit.completions.some(c => c.completed_date === date)
-    }));
-  };
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <Target className="w-6 h-6 text-blue-600" />
-          Habits
-        </h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Habit
-        </button>
-      </div>
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4">
-          <input
-            type="text"
-            placeholder="Habit name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-            className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <textarea
-            placeholder="Description (optional)"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={2}
-          />
-          <div className="grid grid-cols-2 gap-4">
+    <div className={`w-full bg-[#111111] dark:bg-[#111111] p-4 rounded-xl border border-[#222] transition-all duration-300 ${isMaximized ? 'fixed inset-0 z-50 h-screen overflow-auto' : ''}`}>
+      <div className="bg-[#191919] rounded-lg border border-[#2a2a2a] shadow-2xl overflow-hidden h-full flex flex-col">
+        {/* Header Section */}
+        <div className="p-6 border-b border-[#2a2a2a] shrink-0">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frequency</label>
-              <select
-                value={formData.frequency}
-                onChange={(e) => setFormData({ ...formData, frequency: e.target.value as 'daily' | 'weekly' })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <div className="flex items-center gap-2 mb-3">
+                <Activity className="w-5 h-5 text-gray-400" />
+                <h1 className="text-2xl font-semibold text-white">Weekly Habit Tracker</h1>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#232323] rounded-md border border-[#2a2a2a]">
+                <Heart className="w-3.5 h-3.5 text-red-400" />
+                <span className="text-sm text-gray-300">Daily Habits</span>
+                <span className="text-xs text-gray-500 ml-2 border-l border-gray-600 pl-2">
+                    {format(startDate, 'MMM d')} - {format(addDays(startDate, 6), 'MMM d')}
+                </span>
+              </div>
+            </div>
+            
+            {/* Toolbar */}
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+               
+              <AnimatePresence>
+                {showSearch && (
+                  <motion.div 
+                    initial={{ width: 0, opacity: 0 }} 
+                    animate={{ width: 200, opacity: 1 }} 
+                    exit={{ width: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-center bg-[#232323] rounded-md border border-[#2a2a2a] px-2">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search habits..."
+                            className="bg-transparent border-none text-sm text-white focus:ring-0 w-full py-1.5 placeholder-gray-500"
+                            autoFocus
+                        />
+                        <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="text-gray-400 hover:text-white">
+                            <X className="w-3 h-3" />
+                        </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Filter / Sort / Actions */}
+              <button 
+                onClick={() => setHideWeekends(!hideWeekends)} 
+                className={`p-2 rounded transition-colors ${hideWeekends ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`} 
+                title={hideWeekends ? "Show Weekends" : "Hide Weekends"}
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</label>
-              <input
-                type="color"
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                className="w-full h-10 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg cursor-pointer"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              {editingHabit ? 'Update Habit' : 'Create Habit'}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2 bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600 text-gray-700 dark:text-gray-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
+                <Filter className="w-4 h-4" />
+              </button>
 
-      {loading ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading habits...</div>
-      ) : (
-        <div className="space-y-4">
-          {habits.map(habit => (
-            <div
-              key={habit.id}
-              className="p-4 border rounded-lg hover:border-blue-300 transition-all"
-              style={{ borderLeftColor: habit.color, borderLeftWidth: '4px' }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{habit.name}</h4>
-                  {habit.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{habit.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEdit(habit)}
-                    className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(habit.id)}
-                    className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              <button 
+                onClick={() => setSortOrder(prev => prev === 'default' ? 'name' : 'default')}
+                className={`p-2 rounded transition-colors ${sortOrder === 'name' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
+                title="Sort by Name"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+              </button>
 
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Flame className={`w-5 h-5 ${habit.currentStreak > 0 ? 'text-orange-500' : 'text-gray-300 dark:text-neutral-600'}`} />
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {habit.currentStreak} day streak
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggleCompletion(habit)}
-                  className={`p-2 rounded-lg transition-all ${
-                    habit.isCompletedToday
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-gray-500 hover:bg-blue-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400'
-                  }`}
+              <button 
+                onClick={completeAllForToday} 
+                className="p-2 hover:bg-[#232323] rounded transition-colors text-gray-400 hover:text-yellow-400" 
+                title="Complete All for Today"
+              >
+                <Zap className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={() => setShowSearch(true)} 
+                className={`p-2 rounded transition-colors ${showSearch ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
+                title="Search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              <button 
+                onClick={() => setIsMaximized(!isMaximized)} 
+                className={`p-2 rounded transition-colors ${isMaximized ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
+                title={isMaximized ? "Minimize" : "Maximize"}
+              >
+                {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+
+              <button className="p-2 hover:bg-[#232323] rounded transition-colors" title="Settings">
+                <Settings className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <div className="ml-2">
+                <Button 
+                    onClick={() => setShowForm(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
                 >
-                  <Check className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="flex gap-1">
-                {getWeekProgress(habit).map(({ date, completed }) => (
-                  <div
-                    key={date}
-                    className={`flex-1 h-2 rounded ${
-                      completed ? 'bg-green-500' : 'bg-gray-200 dark:bg-neutral-700'
-                    }`}
-                    title={date}
-                  />
-                ))}
+                  <span>New</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
               </div>
             </div>
-          ))}
-
-          {habits.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No habits yet. Create your first habit to start tracking!
-            </div>
-          )}
+          </div>
         </div>
-      )}
+
+        {/* Form Modal */}
+        <AnimatePresence>
+            {showForm && (
+                <motion.div 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    onClick={() => resetForm()}
+                >
+                    <motion.div 
+                        initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+                        className="bg-[#191919] border border-[#333] rounded-xl shadow-2xl w-full max-w-md overflow-hidden p-6"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-4">{editingHabit ? 'Edit Habit' : 'New Habit'}</h3>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Habit Name (e.g. Morning Run)"
+                                    className="w-full px-4 py-2 bg-[#232323] border border-[#333] rounded-lg text-white focus:ring-2 focus:ring-blue-600 outline-none"
+                                    required
+                                />
+                            </div>
+                             <div className="flex gap-2 pt-4">
+                                 <button type="button" onClick={resetForm} className="flex-1 py-2 text-gray-400 hover:bg-[#232323] rounded-lg border border-[#333]">Cancel</button>
+                                 <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                             </div>
+                        </form>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
+        {/* Table */}
+        <div className="overflow-x-auto flex-1">
+          <table className="w-full border-collapse">
+            {/* Table Header */}
+            <thead>
+              <tr className="bg-[#1a1a1a] border-b border-[#2a2a2a]">
+                <th className="text-left px-6 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] w-48 bg-[#1a1a1a] min-w-[200px] sticky left-0 z-10">
+                  <div className="flex items-center gap-2">
+                    <Circle className="w-3.5 h-3.5" />
+                    <span>Day</span>
+                  </div>
+                </th>
+                {visibleHabits.map(habit => (
+                    <th key={habit.id} className="text-left px-6 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] min-w-[140px] group relative">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                {getHabitIcon(habit.name)}
+                                <span className="truncate max-w-[100px]" title={habit.name}>{habit.name}</span>
+                            </div>
+                            <div className="opacity-0 group-hover:opacity-100 flex gap-1 absolute right-2 bg-[#1a1a1a] p-1 rounded-md shadow-sm border border-[#333] z-20">
+                                <button onClick={() => { setEditingHabit(habit); setFormData({...habit}); setShowForm(true); }} className="hover:text-blue-400 p-1"><Edit2 className="w-3 h-3"/></button>
+                                <button onClick={() => deleteHabit(habit.id)} className="hover:text-red-400 p-1"><Trash2 className="w-3 h-3"/></button>
+                            </div>
+                        </div>
+                    </th>
+                ))}
+                {visibleHabits.length === 0 && <th className="px-6 py-3 text-sm text-gray-600 italic border-r border-[#2a2a2a]">{searchQuery ? 'No matches' : 'No habits yet'}</th>}
+                <th className="text-center px-4 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] w-16">
+                  <Plus className="w-4 h-4 mx-auto cursor-pointer hover:text-white" onClick={() => setShowForm(true)} />
+                </th>
+                <th className="text-center px-4 py-3 text-sm font-medium text-gray-400 w-16">
+                  <MoreHorizontal className="w-4 h-4 mx-auto" />
+                </th>
+              </tr>
+            </thead>
+
+            {/* Table Body */}
+            <tbody>
+              {visibleDates.map((date) => {
+                 const isToday = isSameDay(date, new Date());
+                 const dayName = format(date, 'EEEE');
+                 return (
+                  <tr key={date.toISOString()} className={`border-b border-[#2a2a2a] hover:bg-[#1f1f1f] transition-colors group ${isToday ? 'bg-blue-900/10' : ''}`}>
+                    <td className={`px-6 py-4 border-r border-[#2a2a2a] border-l-4 ${isToday ? 'border-l-blue-500' : 'border-l-transparent'} bg-[#191919] group-hover:bg-[#1f1f1f] sticky left-0 z-10`}>
+                      <div className="flex items-center gap-3">
+                        <FileText className={`w-4 h-4 ${isToday ? 'text-blue-500' : 'text-gray-500'}`} />
+                        <span className={`font-medium ${isToday ? 'text-blue-400' : 'text-gray-300'}`}>{dayName}</span>
+                      </div>
+                    </td>
+                    {visibleHabits.map(habit => (
+                        <td key={`${habit.id}-${date}`} className="px-6 py-4 border-r border-[#2a2a2a]">
+                            <div className="flex justify-start">
+                             <Checkbox 
+                                 checked={isCompleted(habit.id, date)}
+                                 onCheckedChange={() => toggleCompletion(habit.id, date)}
+                                 className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                             />
+                            </div>
+                        </td>
+                    ))}
+                    {visibleHabits.length === 0 && <td className="border-r border-[#2a2a2a]"></td>}
+                    <td className="px-4 py-4 border-r border-[#2a2a2a]"></td>
+                    <td className="px-4 py-4"></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+
+            {/* Table Footer */}
+            <tfoot>
+              <tr className="bg-[#1a1a1a]">
+                <td className="px-6 py-3 border-r border-[#2a2a2a] bg-[#1a1a1a] sticky left-0 z-10">
+                  <span className="text-xs text-gray-500 font-medium">CHECKED {calculateTotalChecked()}</span>
+                </td>
+                {visibleHabits.map(habit => (
+                    <td key={`total-${habit.id}`} className="px-6 py-3 border-r border-[#2a2a2a] text-left">
+                        <span className="text-xs text-gray-500">{calculateColumnTotal(habit.id)}</span>
+                    </td>
+                ))}
+                 {visibleHabits.length === 0 && <td className="border-r border-[#2a2a2a]"></td>}
+                <td className="px-4 py-3 border-r border-[#2a2a2a]"></td>
+                <td className="px-4 py-3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
