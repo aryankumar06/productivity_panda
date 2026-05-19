@@ -595,6 +595,7 @@ function TaskItem({
         <button
           onClick={() => onToggle(task)}
           className="mt-1 flex-shrink-0"
+          aria-label={task.status === 'completed' ? 'Mark as incomplete' : 'Mark as complete'}
         >
           {task.status === 'completed' ? (
             <motion.div 
@@ -678,12 +679,14 @@ function TaskItem({
           <button
             onClick={() => onEdit(task)}
             className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded transition-colors"
+            aria-label="Edit task"
           >
             <Edit2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => onDelete(task.id)}
             className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded transition-colors"
+            aria-label="Delete task"
           >
             <Trash2 className="w-4 h-4" />
           </button>
