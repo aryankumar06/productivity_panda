@@ -1,0 +1,3 @@
+## 2024-05-20 - Missing aria-label on icon-only action buttons in Toolbar/Table
+**Learning:** Even if buttons contain a `title` attribute providing a tooltip on hover, it's critical to add explicit `aria-label` attributes to icon-only buttons (like those found in toolbars or table headers) for proper screen reader accessibility. The `HabitSection` component had several icon-only action buttons missing these explicit labels.
+**Action:** Always verify that icon-only buttons have an `aria-label` property set to ensure complete screen reader accessibility, alongside `title` tooltips when applicable.
