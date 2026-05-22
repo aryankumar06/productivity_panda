@@ -646,6 +646,7 @@ export default function WorkspaceView() {
                                             <button 
                                                 onClick={() => handleRemoveMember(m.id, m.user_id)}
                                                 className="ml-1 text-gray-400 hover:text-red-500"
+                                                aria-label="Remove member"
                                             >
                                                 <X className="w-3 h-3" />
                                             </button>
@@ -936,7 +937,7 @@ function Modal({ onClose, title, children }: ModalProps) {
             <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
                     <h3 className="text-lg font-bold dark:text-white">{title}</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close modal">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -977,6 +978,7 @@ function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDele
                     <button 
                         onClick={() => onDelete(task.id)}
                         className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete task"
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>
