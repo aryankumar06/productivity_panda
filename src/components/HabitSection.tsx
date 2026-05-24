@@ -220,7 +220,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                             className="bg-transparent border-none text-sm text-white focus:ring-0 w-full py-1.5 placeholder-gray-500"
                             autoFocus
                         />
-                        <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="text-gray-400 hover:text-white">
+                        <button aria-label="Clear search" onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="text-gray-400 hover:text-white">
                             <X className="w-3 h-3" />
                         </button>
                     </div>
@@ -233,6 +233,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                 onClick={() => setHideWeekends(!hideWeekends)} 
                 className={`p-2 rounded transition-colors ${hideWeekends ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`} 
                 title={hideWeekends ? "Show Weekends" : "Hide Weekends"}
+                aria-label={hideWeekends ? "Show Weekends" : "Hide Weekends"}
               >
                 <Filter className="w-4 h-4" />
               </button>
@@ -241,6 +242,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                 onClick={() => setSortOrder(prev => prev === 'default' ? 'name' : 'default')}
                 className={`p-2 rounded transition-colors ${sortOrder === 'name' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
                 title="Sort by Name"
+                aria-label="Sort by Name"
               >
                 <ArrowUpDown className="w-4 h-4" />
               </button>
@@ -249,6 +251,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                 onClick={completeAllForToday} 
                 className="p-2 hover:bg-[#232323] rounded transition-colors text-gray-400 hover:text-yellow-400" 
                 title="Complete All for Today"
+                aria-label="Complete All for Today"
               >
                 <Zap className="w-4 h-4" />
               </button>
@@ -257,6 +260,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                 onClick={() => setShowSearch(true)} 
                 className={`p-2 rounded transition-colors ${showSearch ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
                 title="Search"
+                aria-label="Search"
               >
                 <Search className="w-4 h-4" />
               </button>
@@ -265,11 +269,12 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                 onClick={() => setIsMaximized(!isMaximized)} 
                 className={`p-2 rounded transition-colors ${isMaximized ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-[#232323] text-gray-400'}`}
                 title={isMaximized ? "Minimize" : "Maximize"}
+                aria-label={isMaximized ? "Minimize" : "Maximize"}
               >
                 {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
 
-              <button className="p-2 hover:bg-[#232323] rounded transition-colors" title="Settings">
+              <button className="p-2 hover:bg-[#232323] rounded transition-colors" title="Settings" aria-label="Settings">
                 <Settings className="w-4 h-4 text-gray-400" />
               </button>
 
@@ -343,8 +348,8 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                                 <span className="truncate max-w-[100px]" title={habit.name}>{habit.name}</span>
                             </div>
                             <div className="opacity-0 group-hover:opacity-100 flex gap-1 absolute right-2 bg-[#1a1a1a] p-1 rounded-md shadow-sm border border-[#333] z-20">
-                                <button onClick={() => { setEditingHabit(habit); setFormData({...habit}); setShowForm(true); }} className="hover:text-blue-400 p-1"><Edit2 className="w-3 h-3"/></button>
-                                <button onClick={() => deleteHabit(habit.id)} className="hover:text-red-400 p-1"><Trash2 className="w-3 h-3"/></button>
+                                <button aria-label="Edit habit" onClick={() => { setEditingHabit(habit); setFormData({...habit}); setShowForm(true); }} className="hover:text-blue-400 p-1"><Edit2 className="w-3 h-3"/></button>
+                                <button aria-label="Delete habit" onClick={() => deleteHabit(habit.id)} className="hover:text-red-400 p-1"><Trash2 className="w-3 h-3"/></button>
                             </div>
                         </div>
                     </th>
@@ -378,6 +383,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                              <Checkbox 
                                  checked={isCompleted(habit.id, date)}
                                  onCheckedChange={() => toggleCompletion(habit.id, date)}
+                                 aria-label={`Toggle ${habit.name} on ${dayName}`}
                                  className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                              />
                             </div>
