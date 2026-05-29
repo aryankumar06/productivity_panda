@@ -376,6 +376,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                         <td key={`${habit.id}-${date}`} className="px-6 py-4 border-r border-[#2a2a2a]">
                             <div className="flex justify-start">
                              <Checkbox 
+                                 aria-label={`Toggle ${habit.name} on ${dayName}`}
                                  checked={isCompleted(habit.id, date)}
                                  onCheckedChange={() => toggleCompletion(habit.id, date)}
                                  className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
