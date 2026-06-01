@@ -87,6 +87,7 @@ export function RequestFeatureForm({ className, variant = 'default' }: RequestFe
                                     Request a Feature
                                 </h2>
                                 <button 
+                                    aria-label="Close modal"
                                     onClick={() => setIsOpen(false)}
                                     className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors text-neutral-500"
                                 >
