@@ -567,6 +567,7 @@ export default function WorkspaceView() {
                             <div className="flex items-center gap-2">
                                 {/* Back button for mobile */}
                                 <button
+                                    aria-label="Back to workspaces"
                                     onClick={() => setActiveWorkspaceId(null)}
                                     className="md:hidden p-2 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
                                     title="Back to workspaces"
@@ -644,6 +645,7 @@ export default function WorkspaceView() {
                                         </span>
                                         {canManageMembers && m.user_id !== user?.id && (
                                             <button 
+                                                aria-label="Remove member"
                                                 onClick={() => handleRemoveMember(m.id, m.user_id)}
                                                 className="ml-1 text-gray-400 hover:text-red-500"
                                             >

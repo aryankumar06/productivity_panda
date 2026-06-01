@@ -179,6 +179,7 @@ export default function SettingsView() {
                                 </p>
                             </div>
                             <button 
+                                aria-label="Copy code"
                                 onClick={() => {
                                     if (userCode) {
                                         navigator.clipboard.writeText(userCode);
