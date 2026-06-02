@@ -5,7 +5,7 @@ import {
   Filter, ArrowUpDown, Zap, Search, Maximize2, Settings, Minimize2,
   ChevronDown, Circle, Dumbbell, Brain, Moon, PenLine, 
   BookOpen, Plus, MoreHorizontal, FileText, Activity, Heart,
-  Check, Trash2, Edit2, X
+  Trash2, Edit2, X
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
@@ -343,8 +343,8 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                                 <span className="truncate max-w-[100px]" title={habit.name}>{habit.name}</span>
                             </div>
                             <div className="opacity-0 group-hover:opacity-100 flex gap-1 absolute right-2 bg-[#1a1a1a] p-1 rounded-md shadow-sm border border-[#333] z-20">
-                                <button onClick={() => { setEditingHabit(habit); setFormData({...habit}); setShowForm(true); }} className="hover:text-blue-400 p-1"><Edit2 className="w-3 h-3"/></button>
-                                <button onClick={() => deleteHabit(habit.id)} className="hover:text-red-400 p-1"><Trash2 className="w-3 h-3"/></button>
+                                <button aria-label={`Edit ${habit.name}`} onClick={() => { setEditingHabit(habit); setFormData({...habit}); setShowForm(true); }} className="hover:text-blue-400 p-1"><Edit2 className="w-3 h-3"/></button>
+                                <button aria-label={`Delete ${habit.name}`} onClick={() => deleteHabit(habit.id)} className="hover:text-red-400 p-1"><Trash2 className="w-3 h-3"/></button>
                             </div>
                         </div>
                     </th>
@@ -379,6 +379,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                                  checked={isCompleted(habit.id, date)}
                                  onCheckedChange={() => toggleCompletion(habit.id, date)}
                                  className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                 aria-label={`Toggle ${habit.name} on ${dayName}`}
                              />
                             </div>
                         </td>
