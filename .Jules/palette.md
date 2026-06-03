@@ -1,0 +1,3 @@
+## 2024-06-03 - [Data Grid Accessibility]
+**Learning:** When using checkboxes or inputs within a data grid (like a habit tracker calendar), explicit row and column context must be provided in the `aria-label` (e.g., `aria-label="Toggle [Row] on [Column]"`) so screen readers can properly announce the context. Without this, users only hear "checkbox", leaving them unsure which item and date they are interacting with.
+**Action:** Always construct a detailed `aria-label` string utilizing both the row identifier (e.g., item name) and column identifier (e.g., formatted date) for any interactive elements inside table cells or CSS grids.

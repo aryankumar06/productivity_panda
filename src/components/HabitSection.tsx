@@ -379,6 +379,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                                  checked={isCompleted(habit.id, date)}
                                  onCheckedChange={() => toggleCompletion(habit.id, date)}
                                  className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                 aria-label={`Toggle ${habit.name} on ${format(date, 'MMM d, yyyy')}`}
                              />
                             </div>
                         </td>
