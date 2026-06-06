@@ -225,12 +225,14 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
                   <button
                     onClick={() => handleEdit(event)}
                     className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded transition-colors"
+                    aria-label={`Edit event: ${event.title}`}
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(event.id)}
                     className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded transition-colors"
+                    aria-label={`Delete event: ${event.title}`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
