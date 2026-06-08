@@ -296,6 +296,7 @@ export default function Plan() {
 
                   {/* Delete Button */}
                   <button
+                    aria-label={`Delete project: ${project.title}`}
                     onClick={() => deleteItem(project.id)}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                     title="Delete project"
@@ -414,6 +415,7 @@ export default function Plan() {
 
                               {/* Delete Button */}
                               <button
+                                aria-label={`Delete task: ${task.title}`}
                                 onClick={() => deleteItem(task.id)}
                                 className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                                 title="Delete task"
@@ -511,6 +513,7 @@ export default function Plan() {
                                         {subtask.title}
                                       </span>
                                       <button
+                                        aria-label={`Delete subtask: ${subtask.title}`}
                                         onClick={() => deleteItem(subtask.id)}
                                         className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                                         title="Delete subtask"

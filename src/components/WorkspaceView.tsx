@@ -977,6 +977,7 @@ function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDele
                 <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1">{task.title}</h4>
                 {isManager && (
                     <button 
+                        aria-label={`Delete task: ${task.title}`}
                         onClick={() => onDelete(task.id)}
                         className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
