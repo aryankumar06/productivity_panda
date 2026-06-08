@@ -229,6 +229,7 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
+                    aria-label={`Delete event: ${event.title}`}
                     onClick={() => handleDelete(event.id)}
                     className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-neutral-800 rounded transition-colors"
                   >
