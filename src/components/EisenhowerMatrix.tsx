@@ -230,6 +230,7 @@ function DroppableQuadrant({ id, title, tasks, addingToQuadrant, setAddingToQuad
               <button 
                   onClick={() => { setAddingToQuadrant(id); setTimeout(() => document.getElementById(`input-${id}`)?.focus(), 50); }}
                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                  aria-label={`Add task to ${title}`}
               >
                   <Plus className="w-4 h-4" />
               </button>
