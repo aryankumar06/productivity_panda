@@ -241,6 +241,7 @@ export default function Plan() {
                   {/* Expand/Collapse */}
                   {hasChildren && (
                     <button
+                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} project: ${project.title}`}
                       onClick={() => toggleExpand(project.id)}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
@@ -250,6 +251,7 @@ export default function Plan() {
 
                   {/* Status Icon - Animated */}
                   <motion.button
+                    aria-label={`Toggle status for project: ${project.title}`}
                     onClick={() => toggleStatus(project.id, project.status)}
                     className="flex-shrink-0 hover:opacity-80 transition-opacity"
                   >
@@ -372,6 +374,7 @@ export default function Plan() {
                               {/* Expand/Collapse */}
                               {hasSubtasks && (
                                 <button
+                                  aria-label={`${isTaskExpanded ? 'Collapse' : 'Expand'} task: ${task.title}`}
                                   onClick={() => toggleExpand(task.id)}
                                   className="text-gray-400 hover:text-gray-600"
                                 >
@@ -381,6 +384,7 @@ export default function Plan() {
 
                               {/* Status Icon - Animated */}
                               <motion.button
+                                aria-label={`Toggle status for task: ${task.title}`}
                                 onClick={() => toggleStatus(task.id, task.status)}
                                 className="flex-shrink-0 hover:opacity-80 transition-opacity"
                               >
@@ -484,6 +488,7 @@ export default function Plan() {
                                   {task.subtasks.map((subtask) => (
                                     <div key={subtask.id} className="flex items-center gap-3 py-1">
                                       <motion.button
+                                        aria-label={`Toggle status for subtask: ${subtask.title}`}
                                         onClick={() => toggleStatus(subtask.id, subtask.status)}
                                         className="flex-shrink-0 hover:opacity-80 transition-opacity"
                                       >
