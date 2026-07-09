@@ -175,6 +175,7 @@ export default function TaskPlan({
                   >
                     {task.subtasks.length > 0 && (
                       <button
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} task: ${task.title}`}
                         onClick={() => toggleTaskExpansion(task.id)}
                         className="mr-1 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
