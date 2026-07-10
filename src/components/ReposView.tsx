@@ -264,6 +264,7 @@ export default function ReposView() {
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
               <h3 className="text-lg font-bold dark:text-white">Select Repositories to Import</h3>
               <button 
+                aria-label="Close modal"
                 onClick={() => setShowImportModal(false)} 
                 className="text-gray-400 hover:text-gray-600"
               >
