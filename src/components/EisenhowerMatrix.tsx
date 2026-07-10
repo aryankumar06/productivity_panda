@@ -228,6 +228,7 @@ function DroppableQuadrant({ id, title, tasks, addingToQuadrant, setAddingToQuad
           <div className="flex items-center gap-2">
               <span className="bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded text-sm">{tasks.length}</span>
               <button 
+                  aria-label={`Add task to ${title}`}
                   onClick={() => { setAddingToQuadrant(id); setTimeout(() => document.getElementById(`input-${id}`)?.focus(), 50); }}
                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
               >

@@ -356,7 +356,9 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                 ))}
                 {visibleHabits.length === 0 && <th className="px-6 py-3 text-sm text-gray-600 italic border-r border-[#2a2a2a]">{searchQuery ? 'No matches' : 'No habits yet'}</th>}
                 <th className="text-center px-4 py-3 text-sm font-medium text-gray-400 border-r border-[#2a2a2a] w-16">
-                  <Plus className="w-4 h-4 mx-auto cursor-pointer hover:text-white" onClick={() => setShowForm(true)} />
+                  <button aria-label="Add habit" onClick={() => setShowForm(true)} className="mx-auto block text-gray-400 hover:text-white">
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </th>
                 <th className="text-center px-4 py-3 text-sm font-medium text-gray-400 w-16">
                   <MoreHorizontal className="w-4 h-4 mx-auto" />
