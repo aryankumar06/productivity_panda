@@ -645,7 +645,7 @@ export default function WorkspaceView() {
                                         </span>
                                         {canManageMembers && m.user_id !== user?.id && (
                                             <button 
-                                                aria-label="Remove member"
+                                                aria-label={`Remove member: ${m.display_name || m.email?.split('@')[0] || 'User'}`}
                                                 onClick={() => handleRemoveMember(m.id, m.user_id)}
                                                 className="ml-1 text-gray-400 hover:text-red-500"
                                             >
