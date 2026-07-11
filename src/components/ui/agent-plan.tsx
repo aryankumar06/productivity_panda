@@ -243,6 +243,8 @@ export default function Plan() {
                     <button
                       onClick={() => toggleExpand(project.id)}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      aria-label={isExpanded ? `Collapse project: ${project.title}` : `Expand project: ${project.title}`}
+                      title={isExpanded ? "Collapse project" : "Expand project"}
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                     </button>
@@ -252,6 +254,8 @@ export default function Plan() {
                   <motion.button
                     onClick={() => toggleStatus(project.id, project.status)}
                     className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                    aria-label={project.status === 'completed' ? `Mark project incomplete: ${project.title}` : `Mark project complete: ${project.title}`}
+                    title={project.status === 'completed' ? "Mark project incomplete" : "Mark project complete"}
                   >
                     <AnimatePresence mode="wait">
                       <motion.div
@@ -374,6 +378,8 @@ export default function Plan() {
                                 <button
                                   onClick={() => toggleExpand(task.id)}
                                   className="text-gray-400 hover:text-gray-600"
+                                  aria-label={isTaskExpanded ? `Collapse task: ${task.title}` : `Expand task: ${task.title}`}
+                                  title={isTaskExpanded ? "Collapse task" : "Expand task"}
                                 >
                                   {isTaskExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 </button>
@@ -383,6 +389,8 @@ export default function Plan() {
                               <motion.button
                                 onClick={() => toggleStatus(task.id, task.status)}
                                 className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                                aria-label={task.status === 'completed' ? `Mark task incomplete: ${task.title}` : `Mark task complete: ${task.title}`}
+                                title={task.status === 'completed' ? "Mark task incomplete" : "Mark task complete"}
                               >
                                 <AnimatePresence mode="wait">
                                   <motion.div
@@ -486,6 +494,8 @@ export default function Plan() {
                                       <motion.button
                                         onClick={() => toggleStatus(subtask.id, subtask.status)}
                                         className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                                        aria-label={subtask.status === 'completed' ? `Mark subtask incomplete: ${subtask.title}` : `Mark subtask complete: ${subtask.title}`}
+                                        title={subtask.status === 'completed' ? "Mark subtask incomplete" : "Mark subtask complete"}
                                       >
                                         <AnimatePresence mode="wait">
                                           <motion.div
