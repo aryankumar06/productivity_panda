@@ -242,6 +242,8 @@ export default function Plan() {
                   {hasChildren && (
                     <button
                       onClick={() => toggleExpand(project.id)}
+                      aria-expanded={isExpanded}
+                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} project: ${project.title}`}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
@@ -373,6 +375,8 @@ export default function Plan() {
                               {hasSubtasks && (
                                 <button
                                   onClick={() => toggleExpand(task.id)}
+                                  aria-expanded={isTaskExpanded}
+                                  aria-label={`${isTaskExpanded ? 'Collapse' : 'Expand'} task: ${task.title}`}
                                   className="text-gray-400 hover:text-gray-600"
                                 >
                                   {isTaskExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
