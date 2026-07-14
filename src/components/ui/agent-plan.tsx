@@ -241,6 +241,8 @@ export default function Plan() {
                   {/* Expand/Collapse */}
                   {hasChildren && (
                     <button
+                      aria-label={isExpanded ? `Collapse project: ${project.title}` : `Expand project: ${project.title}`}
+                      title={isExpanded ? `Collapse project: ${project.title}` : `Expand project: ${project.title}`}
                       onClick={() => toggleExpand(project.id)}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
@@ -250,6 +252,8 @@ export default function Plan() {
 
                   {/* Status Icon - Animated */}
                   <motion.button
+                    aria-label={`Change status of project: ${project.title}. Current status: ${project.status}`}
+                    title={`Change status of project: ${project.title}. Current status: ${project.status}`}
                     onClick={() => toggleStatus(project.id, project.status)}
                     className="flex-shrink-0 hover:opacity-80 transition-opacity"
                   >
@@ -372,6 +376,8 @@ export default function Plan() {
                               {/* Expand/Collapse */}
                               {hasSubtasks && (
                                 <button
+                                  aria-label={isTaskExpanded ? `Collapse task: ${task.title}` : `Expand task: ${task.title}`}
+                                  title={isTaskExpanded ? `Collapse task: ${task.title}` : `Expand task: ${task.title}`}
                                   onClick={() => toggleExpand(task.id)}
                                   className="text-gray-400 hover:text-gray-600"
                                 >
@@ -381,6 +387,8 @@ export default function Plan() {
 
                               {/* Status Icon - Animated */}
                               <motion.button
+                                aria-label={`Change status of task: ${task.title}. Current status: ${task.status}`}
+                                title={`Change status of task: ${task.title}. Current status: ${task.status}`}
                                 onClick={() => toggleStatus(task.id, task.status)}
                                 className="flex-shrink-0 hover:opacity-80 transition-opacity"
                               >
@@ -484,6 +492,8 @@ export default function Plan() {
                                   {task.subtasks.map((subtask) => (
                                     <div key={subtask.id} className="flex items-center gap-3 py-1">
                                       <motion.button
+                                        aria-label={`Change status of subtask: ${subtask.title}. Current status: ${subtask.status}`}
+                                        title={`Change status of subtask: ${subtask.title}. Current status: ${subtask.status}`}
                                         onClick={() => toggleStatus(subtask.id, subtask.status)}
                                         className="flex-shrink-0 hover:opacity-80 transition-opacity"
                                       >
