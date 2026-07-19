@@ -44,6 +44,8 @@ export default function DittoDashboard() {
       <div className="mb-6 flex items-center justify-end">
         <button
           onClick={() => setShowAddForm(!showAddForm)}
+          aria-expanded={showAddForm}
+          aria-controls="add-project-form"
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -55,6 +57,7 @@ export default function DittoDashboard() {
       <AnimatePresence>
         {showAddForm && (
           <motion.div
+            id="add-project-form"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}

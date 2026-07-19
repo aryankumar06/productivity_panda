@@ -133,6 +133,8 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
         </h2>
         <button
           onClick={() => setShowForm(!showForm)}
+          aria-expanded={showForm}
+          aria-controls="add-event-form"
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -141,7 +143,7 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4">
+        <form id="add-event-form" onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4">
           <input
             type="text"
             placeholder="Event title"

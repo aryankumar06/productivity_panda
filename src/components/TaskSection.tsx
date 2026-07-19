@@ -313,6 +313,8 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
 
         <button
           onClick={() => setShowForm(!showForm)}
+          aria-expanded={showForm}
+          aria-controls="add-task-form"
           className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -329,6 +331,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       <AnimatePresence mode="wait">
         {showForm && (
           <motion.form 
+            id="add-task-form"
             onSubmit={handleSubmit} 
             className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4"
             initial={{ opacity: 0, height: 0 }}
