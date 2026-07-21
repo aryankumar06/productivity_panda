@@ -223,6 +223,7 @@ export default function EventSection({ selectedDate }: EventSectionProps) {
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    aria-label={`Edit event: ${event.title}`}
                     onClick={() => handleEdit(event)}
                     className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-neutral-800 rounded transition-colors"
                   >
