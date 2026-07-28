@@ -284,11 +284,17 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <CheckSquare className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
+          <h2 id="task-section-title" className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
           
           {/* View Mode Toggle - Simplified and explicit */}
-          <div className="flex items-center ml-2 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 border border-gray-200 dark:border-neutral-700">
+          <div
+            className="flex items-center ml-2 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 border border-gray-200 dark:border-neutral-700"
+            role="group"
+            aria-labelledby="task-section-title"
+          >
             <button
+              type="button"
+              aria-pressed={viewMode === 'list'}
               onClick={() => setViewMode('list')}
               className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                 viewMode === 'list' 
@@ -299,6 +305,8 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
               List
             </button>
             <button
+              type="button"
+              aria-pressed={viewMode === 'plan'}
               onClick={() => setViewMode('plan')}
               className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                 viewMode === 'plan' 
@@ -313,6 +321,8 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
 
         <button
           onClick={() => setShowForm(!showForm)}
+          aria-expanded={showForm}
+          aria-controls="task-form"
           className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -329,6 +339,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       <AnimatePresence mode="wait">
         {showForm && (
           <motion.form 
+            id="task-form"
             onSubmit={handleSubmit} 
             className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4"
             initial={{ opacity: 0, height: 0 }}
