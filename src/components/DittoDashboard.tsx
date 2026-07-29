@@ -96,13 +96,15 @@ export default function DittoDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label id="priority-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Priority
                   </label>
-                  <div className="flex gap-2">
+                  <div role="group" aria-labelledby="priority-label" className="flex gap-2">
                     {(['low', 'medium', 'high'] as const).map((priority) => (
                       <button
                         key={priority}
+                        type="button"
+                        aria-pressed={newProjectPriority === priority}
                         onClick={() => setNewProjectPriority(priority)}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                           newProjectPriority === priority
