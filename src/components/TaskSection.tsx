@@ -287,8 +287,14 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
           
           {/* View Mode Toggle - Simplified and explicit */}
-          <div className="flex items-center ml-2 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 border border-gray-200 dark:border-neutral-700">
+          <div
+            role="group"
+            aria-label="View mode"
+            className="flex items-center ml-2 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 border border-gray-200 dark:border-neutral-700"
+          >
             <button
+              type="button"
+              aria-pressed={viewMode === 'list'}
               onClick={() => setViewMode('list')}
               className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                 viewMode === 'list' 
@@ -299,6 +305,8 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
               List
             </button>
             <button
+              type="button"
+              aria-pressed={viewMode === 'plan'}
               onClick={() => setViewMode('plan')}
               className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                 viewMode === 'plan' 
