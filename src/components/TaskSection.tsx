@@ -287,9 +287,15 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
           
           {/* View Mode Toggle - Simplified and explicit */}
-          <div className="flex items-center ml-2 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 border border-gray-200 dark:border-neutral-700">
+          <div
+            className="flex items-center ml-2 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 border border-gray-200 dark:border-neutral-700"
+            role="group"
+            aria-label="View Mode"
+          >
             <button
+              type="button"
               onClick={() => setViewMode('list')}
+              aria-pressed={viewMode === 'list'}
               className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                 viewMode === 'list' 
                   ? 'bg-blue-600 text-white shadow-sm' 
@@ -299,7 +305,9 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
               List
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('plan')}
+              aria-pressed={viewMode === 'plan'}
               className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                 viewMode === 'plan' 
                   ? 'bg-blue-600 text-white shadow-sm' 
@@ -313,6 +321,8 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
 
         <button
           onClick={() => setShowForm(!showForm)}
+          aria-expanded={showForm}
+          aria-controls="task-form-container"
           className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -329,6 +339,7 @@ export default function TaskSection({ selectedDate }: TaskSectionProps) {
       <AnimatePresence mode="wait">
         {showForm && (
           <motion.form 
+            id="task-form-container"
             onSubmit={handleSubmit} 
             className="mb-6 p-4 bg-gray-50 dark:bg-neutral-900/30 rounded-lg space-y-4"
             initial={{ opacity: 0, height: 0 }}
