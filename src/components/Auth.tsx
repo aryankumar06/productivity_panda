@@ -526,10 +526,11 @@ export default function Auth() {
 
                 {isSignUp && (
                   <div className="space-y-2">
-                     <p className="text-xs text-gray-500">I am a...</p>
-                     <div className="grid grid-cols-3 gap-2">
+                     <p id="user-type-group-label" className="text-xs text-gray-500">I am a...</p>
+                     <div className="grid grid-cols-3 gap-2" role="group" aria-labelledby="user-type-group-label">
                         <button
                           type="button"
+                          aria-pressed={userType === 'student'}
                           onClick={() => setUserType('student')}
                           className={`p-3 border rounded-lg text-xs font-medium transition-all ${
                             userType === 'student'
@@ -541,6 +542,7 @@ export default function Auth() {
                         </button>
                         <button
                           type="button"
+                          aria-pressed={userType === 'professional'}
                           onClick={() => setUserType('professional')}
                           className={`p-3 border rounded-lg text-xs font-medium transition-all ${
                             userType === 'professional'
@@ -552,6 +554,7 @@ export default function Auth() {
                         </button>
                         <button
                           type="button"
+                          aria-pressed={userType === 'creator'}
                           onClick={() => setUserType('creator')}
                           className={`p-3 border rounded-lg text-xs font-medium transition-all ${
                             userType === 'creator'
