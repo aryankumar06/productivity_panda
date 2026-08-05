@@ -203,13 +203,15 @@ export default function SettingsView() {
                             <Layout className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold dark:text-white">Productivity Style</h3>
+                            <h3 id="productivity-style-heading" className="text-lg font-semibold dark:text-white">Productivity Style</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Choose the mode that best fits your workflow.</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="group" aria-labelledby="productivity-style-heading">
                         <button
+                            type="button"
+                            aria-pressed={style === 'student'}
                             onClick={() => setStyle('student')}
                             className={`relative p-4 rounded-xl border-2 text-left transition-all ${
                                 style === 'student' 
@@ -223,6 +225,8 @@ export default function SettingsView() {
                         </button>
 
                         <button
+                            type="button"
+                            aria-pressed={style === 'professional'}
                             onClick={() => setStyle('professional')}
                             className={`relative p-4 rounded-xl border-2 text-left transition-all ${
                                 style === 'professional' 
@@ -236,6 +240,8 @@ export default function SettingsView() {
                         </button>
 
                         <button
+                            type="button"
+                            aria-pressed={style === 'creator'}
                             onClick={() => setStyle('creator')}
                             className={`relative p-4 rounded-xl border-2 text-left transition-all ${
                                 style === 'creator' 
