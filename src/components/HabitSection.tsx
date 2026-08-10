@@ -281,6 +281,8 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
               <div className="ml-2">
                 <Button 
                     onClick={() => setShowForm(true)}
+                    aria-expanded={showForm}
+                    aria-controls="habit-form-modal"
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
                 >
                   <span>New</span>
@@ -300,6 +302,7 @@ export default function HabitSection({ selectedDate }: HabitSectionProps) {
                     onClick={() => resetForm()}
                 >
                     <motion.div 
+                        id="habit-form-modal"
                         initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
                         className="bg-[#191919] border border-[#333] rounded-xl shadow-2xl w-full max-w-md overflow-hidden p-6"
                         onClick={e => e.stopPropagation()}
