@@ -44,7 +44,9 @@ export default function DittoDashboard() {
       <div className="mb-6 flex items-center justify-end">
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+          aria-expanded={showAddForm}
+          aria-controls="add-project-form"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
         >
           <Plus className="w-4 h-4" />
           {showAddForm ? 'Cancel' : 'Add Project'}
@@ -55,6 +57,7 @@ export default function DittoDashboard() {
       <AnimatePresence>
         {showAddForm && (
           <motion.div
+            id="add-project-form"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -96,15 +99,17 @@ export default function DittoDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label id="priority-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Priority
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" role="group" aria-labelledby="priority-label">
                     {(['low', 'medium', 'high'] as const).map((priority) => (
                       <button
                         key={priority}
+                        type="button"
+                        aria-pressed={newProjectPriority === priority}
                         onClick={() => setNewProjectPriority(priority)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 ${
                           newProjectPriority === priority
                             ? priority === 'high'
                               ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
