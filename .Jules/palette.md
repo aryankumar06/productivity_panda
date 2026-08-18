@@ -5,3 +5,6 @@
 ## 2026-06-08 - Explicit Context for Icon-Only Action Buttons in Lists
 **Learning:** Icon-only action buttons (like Delete) in nested lists or trees without the item's context in the aria-label are ambiguous to screen reader users.
 **Action:** When adding icon-only action buttons to items in lists, always include the specific item's title in the `aria-label` (e.g., `aria-label="Delete task: [Task Title]"`) to provide explicit context.
+## 2026-08-18 - Custom Button Groups Need Explicit A11y
+**Learning:** React elements acting as mutually exclusive selectors (like a list of buttons for selecting 'Priority') need explicit ARIA grouping (`role="group"`), an `aria-label`, `aria-pressed` on individual buttons to indicate state, and clear focus styles for keyboard users, as standard HTML buttons don't implicitly convey this relationship.
+**Action:** Always wrap custom button groups in a `role="group"`, add `aria-pressed` bindings, explicitly add `type="button"` to prevent implicit submits, and ensure `focus-visible` classes exist.
