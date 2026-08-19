@@ -5,3 +5,6 @@
 ## 2026-06-08 - Explicit Context for Icon-Only Action Buttons in Lists
 **Learning:** Icon-only action buttons (like Delete) in nested lists or trees without the item's context in the aria-label are ambiguous to screen reader users.
 **Action:** When adding icon-only action buttons to items in lists, always include the specific item's title in the `aria-label` (e.g., `aria-label="Delete task: [Task Title]"`) to provide explicit context.
+## 2024-05-16 - ARIA State for Mutually Exclusive Buttons and Collapsible Forms
+**Learning:** When using custom button groups for mutually exclusive options (like priority levels), screen readers need explicitly defined roles (`role="group"`) and states (`aria-pressed`) to understand the relationship and active selection. Similarly, buttons that toggle form visibility need `aria-expanded` to communicate their collapsible state.
+**Action:** Always wrap custom radio-like button groups in `role="group"` with an `aria-label`, use `aria-pressed` on the individual buttons to indicate selection, and ensure toggle buttons use `aria-expanded`.
