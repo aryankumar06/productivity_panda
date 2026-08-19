@@ -44,6 +44,7 @@ export default function DittoDashboard() {
       <div className="mb-6 flex items-center justify-end">
         <button
           onClick={() => setShowAddForm(!showAddForm)}
+          aria-expanded={showAddForm}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -99,10 +100,12 @@ export default function DittoDashboard() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Priority
                   </label>
-                  <div className="flex gap-2">
+                  <div role="group" aria-label="Project Priority" className="flex gap-2">
                     {(['low', 'medium', 'high'] as const).map((priority) => (
                       <button
                         key={priority}
+                        type="button"
+                        aria-pressed={newProjectPriority === priority}
                         onClick={() => setNewProjectPriority(priority)}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                           newProjectPriority === priority
