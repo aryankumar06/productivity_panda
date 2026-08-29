@@ -5,3 +5,6 @@
 ## 2026-06-08 - Explicit Context for Icon-Only Action Buttons in Lists
 **Learning:** Icon-only action buttons (like Delete) in nested lists or trees without the item's context in the aria-label are ambiguous to screen reader users.
 **Action:** When adding icon-only action buttons to items in lists, always include the specific item's title in the `aria-label` (e.g., `aria-label="Delete task: [Task Title]"`) to provide explicit context.
+## 2024-08-29 - State and Context for Hierarchical Toggle Buttons
+**Learning:** Expanding/collapsing elements and status toggles in nested lists can be difficult for screen reader and keyboard users if they lack state attributes (like `aria-expanded`), context in labels, or visible focus indicators.
+**Action:** Add `aria-expanded` to disclosure widgets, include item context in `aria-label` for status/expand buttons, and add `focus-visible:ring-2` for clear keyboard navigation.

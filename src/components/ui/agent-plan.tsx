@@ -241,8 +241,10 @@ export default function Plan() {
                   {/* Expand/Collapse */}
                   {hasChildren && (
                     <button
+                      aria-expanded={isExpanded}
+                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} project: ${project.title}`}
                       onClick={() => toggleExpand(project.id)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus-visible:ring-2 focus-visible:ring-blue-500 rounded-sm"
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                     </button>
@@ -250,8 +252,9 @@ export default function Plan() {
 
                   {/* Status Icon - Animated */}
                   <motion.button
+                    aria-label={`Toggle status for project: ${project.title}`}
                     onClick={() => toggleStatus(project.id, project.status)}
-                    className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                    className="flex-shrink-0 hover:opacity-80 transition-opacity focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full"
                   >
                     <AnimatePresence mode="wait">
                       <motion.div
@@ -372,8 +375,10 @@ export default function Plan() {
                               {/* Expand/Collapse */}
                               {hasSubtasks && (
                                 <button
+                                  aria-expanded={isTaskExpanded}
+                                  aria-label={`${isTaskExpanded ? 'Collapse' : 'Expand'} task: ${task.title}`}
                                   onClick={() => toggleExpand(task.id)}
-                                  className="text-gray-400 hover:text-gray-600"
+                                  className="text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 rounded-sm"
                                 >
                                   {isTaskExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 </button>
@@ -381,8 +386,9 @@ export default function Plan() {
 
                               {/* Status Icon - Animated */}
                               <motion.button
+                                aria-label={`Toggle status for task: ${task.title}`}
                                 onClick={() => toggleStatus(task.id, task.status)}
-                                className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                                className="flex-shrink-0 hover:opacity-80 transition-opacity focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full"
                               >
                                 <AnimatePresence mode="wait">
                                   <motion.div
@@ -484,8 +490,9 @@ export default function Plan() {
                                   {task.subtasks.map((subtask) => (
                                     <div key={subtask.id} className="flex items-center gap-3 py-1">
                                       <motion.button
+                                        aria-label={`Toggle status for subtask: ${subtask.title}`}
                                         onClick={() => toggleStatus(subtask.id, subtask.status)}
-                                        className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                                        className="flex-shrink-0 hover:opacity-80 transition-opacity focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full"
                                       >
                                         <AnimatePresence mode="wait">
                                           <motion.div
