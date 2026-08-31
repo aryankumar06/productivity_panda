@@ -1001,13 +1001,15 @@ function TaskCard({ task, role, isManager, getMemberName, onUpdateStatus, onDele
                         <button
                             onClick={() => setShowStatusMenu(!showStatusMenu)}
                             className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                            aria-expanded={showStatusMenu}
+                            aria-controls={`status-menu-${task.id}`}
                         >
                             Move to...
                             <ChevronRight className={`w-3 h-3 transition-transform ${showStatusMenu ? 'rotate-90' : ''}`} />
                         </button>
                         
                         {showStatusMenu && (
-                            <div className="absolute left-0 top-6 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                            <div id={`status-menu-${task.id}`} className="absolute left-0 top-6 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
                                 {allowedNextStates.map(status => {
                                     const config = getStatusConfig(status);
                                     return (
