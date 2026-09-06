@@ -208,10 +208,12 @@ export default function SettingsView() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="group" aria-label="Productivity Style Options">
                         <button
+                            type="button"
+                            aria-pressed={style === 'student'}
                             onClick={() => setStyle('student')}
-                            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                            className={`relative p-4 rounded-xl border-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                                 style === 'student' 
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
                                     : 'border-gray-200 dark:border-neutral-800 hover:border-gray-300 dark:hover:border-neutral-700'
@@ -223,8 +225,10 @@ export default function SettingsView() {
                         </button>
 
                         <button
+                            type="button"
+                            aria-pressed={style === 'professional'}
                             onClick={() => setStyle('professional')}
-                            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                            className={`relative p-4 rounded-xl border-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                                 style === 'professional' 
                                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
                                     : 'border-gray-200 dark:border-neutral-800 hover:border-gray-300 dark:hover:border-neutral-700'
@@ -236,8 +240,10 @@ export default function SettingsView() {
                         </button>
 
                         <button
+                            type="button"
+                            aria-pressed={style === 'creator'}
                             onClick={() => setStyle('creator')}
-                            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                            className={`relative p-4 rounded-xl border-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
                                 style === 'creator' 
                                     ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' 
                                     : 'border-gray-200 dark:border-neutral-800 hover:border-gray-300 dark:hover:border-neutral-700'
