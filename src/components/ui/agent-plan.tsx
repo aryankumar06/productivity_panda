@@ -242,7 +242,9 @@ export default function Plan() {
                   {hasChildren && (
                     <button
                       onClick={() => toggleExpand(project.id)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      aria-expanded={isExpanded}
+                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} project: ${project.name}`}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                     </button>
@@ -307,7 +309,8 @@ export default function Plan() {
                   {/* Add Task Button */}
                   <button
                     onClick={() => setAddingTaskTo(project.id)}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                    aria-label={`Add task to project: ${project.name}`}
+                    className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
                   >
                     <Plus className="w-3 h-3" />
                     Add Task
@@ -373,7 +376,9 @@ export default function Plan() {
                               {hasSubtasks && (
                                 <button
                                   onClick={() => toggleExpand(task.id)}
-                                  className="text-gray-400 hover:text-gray-600"
+                                  aria-expanded={isTaskExpanded}
+                                  aria-label={`${isTaskExpanded ? 'Collapse' : 'Expand'} task: ${task.title}`}
+                                  className="text-gray-400 hover:text-gray-600 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 >
                                   {isTaskExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 </button>
@@ -426,7 +431,8 @@ export default function Plan() {
                               {/* Add Subtask Button */}
                               <button
                                 onClick={() => setAddingSubtaskTo(task.id)}
-                                className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-md"
+                                aria-label={`Add subtask to task: ${task.title}`}
+                                className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-neutral-800"
                               >
                                 <Plus className="w-3 h-3" />
                                 Subtask

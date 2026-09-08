@@ -176,7 +176,9 @@ export default function TaskPlan({
                     {task.subtasks.length > 0 && (
                       <button
                         onClick={() => toggleTaskExpansion(task.id)}
-                        className="mr-1 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} task: ${task.title}`}
+                        className="mr-1 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-4 h-4" />
