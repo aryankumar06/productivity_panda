@@ -203,15 +203,17 @@ export default function SettingsView() {
                             <Layout className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold dark:text-white">Productivity Style</h3>
+                            <h3 id="productivity-style-heading" className="text-lg font-semibold dark:text-white">Productivity Style</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Choose the mode that best fits your workflow.</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="group" aria-labelledby="productivity-style-heading">
                         <button
+                            type="button"
+                            aria-pressed={style === 'student'}
                             onClick={() => setStyle('student')}
-                            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                            className={`relative p-4 rounded-xl border-2 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 ${
                                 style === 'student' 
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
                                     : 'border-gray-200 dark:border-neutral-800 hover:border-gray-300 dark:hover:border-neutral-700'
@@ -223,8 +225,10 @@ export default function SettingsView() {
                         </button>
 
                         <button
+                            type="button"
+                            aria-pressed={style === 'professional'}
                             onClick={() => setStyle('professional')}
-                            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                            className={`relative p-4 rounded-xl border-2 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 ${
                                 style === 'professional' 
                                     ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
                                     : 'border-gray-200 dark:border-neutral-800 hover:border-gray-300 dark:hover:border-neutral-700'
@@ -236,8 +240,10 @@ export default function SettingsView() {
                         </button>
 
                         <button
+                            type="button"
+                            aria-pressed={style === 'creator'}
                             onClick={() => setStyle('creator')}
-                            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                            className={`relative p-4 rounded-xl border-2 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 ${
                                 style === 'creator' 
                                     ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' 
                                     : 'border-gray-200 dark:border-neutral-800 hover:border-gray-300 dark:hover:border-neutral-700'
