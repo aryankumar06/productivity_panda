@@ -938,7 +938,11 @@ function Modal({ onClose, title, children }: ModalProps) {
             <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-800">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
                     <h3 className="text-lg font-bold dark:text-white">{title}</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none rounded-md p-1 -mr-1 transition-colors"
+                        aria-label="Close modal"
+                    >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
