@@ -266,6 +266,7 @@ export default function ReposView() {
               <button 
                 onClick={() => setShowImportModal(false)} 
                 className="text-gray-400 hover:text-gray-600"
+                aria-label="Close modal"
               >
                 ✕
               </button>
